@@ -56,22 +56,25 @@ bot.command('goals', async (ctx) => {
   const loading = await ctx.reply('⏳ Загружаем твои цели...');
 
   try {
-    const uid = userIdApi;
-    const goalsTime = await checkGoalCompletion(uid);
-    const goals = await initializeUserGoals(uid);
+    const profile = await addProfile(ctx);
+    const uid = profile?.id;
+    if (uid) {
+      const goalsTime = await checkGoalCompletion(uid);
+      const goals = await initializeUserGoals(uid);
 
-    goalsApi = goalsTime || goals;
+      goalsApi = goalsTime || goals;
 
-    await ctx.deleteMessage(loading.message_id);
+      await ctx.deleteMessage(loading.message_id);
 
-    return ctx.reply(
-      `📋 Выбери категорию целей:`,
-      Markup.inlineKeyboard([
-        [Markup.button.callback('🟡 Цели в процессе', 'in_progress_goals')],
-        [Markup.button.callback('✅ Выполненные цели', 'done_goals')],
-        [Markup.button.callback('❌ Закрыть', 'close_message')],
-      ])
-    );
+      return ctx.reply(
+        `📋 Выбери категорию целей:`,
+        Markup.inlineKeyboard([
+          [Markup.button.callback('🟡 Цели в процессе', 'in_progress_goals')],
+          [Markup.button.callback('✅ Выполненные цели', 'done_goals')],
+          [Markup.button.callback('❌ Закрыть', 'close_message')],
+        ])
+      );
+    }
   } catch (err) {
     console.error(err);
     await ctx.reply('❌ Ошибка при загрузке целей, попробуй позже.');
@@ -139,20 +142,21 @@ bot.action('generationLast', async (ctx) => {
   }
 
   try {
-    await getGeneraleText(userData.telegramId, goalsDone, goalsInProgress);
+    if (userData.telegramId) {
+      await getGeneraleText(userData.telegramId, goalsDone, goalsInProgress);
 
-    const profile = await addProfile(ctx);
+      const profile = await addProfile(ctx);
 
-    let yesterdayReport = profile?.yesterdayReport
+      let yesterdayReport = profile?.yesterdayReport
 
-    await ctx.deleteMessage(loading.message_id);
+      await ctx.deleteMessage(loading.message_id);
 
-    if (yesterdayReport[0]) {
-      await ctx.reply(yesterdayReport[0].text);
-    } else {
-      await ctx.reply('Нету прошлого отчёта!');
+      if (yesterdayReport[0]) {
+        await ctx.reply(yesterdayReport[0].text);
+      } else {
+        await ctx.reply('Нету прошлого отчёта!');
+      }
     }
-
   } catch (err) {
     console.error('Ошибка генерации:', err);
     await ctx.deleteMessage(loading.message_id);
@@ -191,36 +195,39 @@ bot.command('info', async (ctx) => {
 
 bot.action('generation', async (ctx) => {
   const loading = await ctx.reply('⏳ Генерируем твоё сообщение...');
-
-  const uid = userIdApi;
-
-  const goalsTime = await checkGoalCompletion(uid);
-  const goals = await initializeUserGoals(uid);
-  goalsApi = goalsTime || goals;
-
-  const goalsInProgress = goalsApi.filter(g => g.status === 'in_progress');
-  const goalsDone = goalsApi.filter(g => g.status === 'completed');
-
-  if (goalsInProgress.length === 0 && goalsDone.length === 0) {
-    await ctx.deleteMessage(loading.message_id);
-    return ctx.reply('😴 Пока ничего нет — пора действовать. Возьми цели и начни движение.');
-  }
-
   try {
-    const generateText = await getGeneraleText(userData.telegramId, goalsDone, goalsInProgress);
+    const profile = await addProfile(ctx);
+    const uid = profile?.id;
+    userData = profile
+    if (uid) {
 
-    await ctx.deleteMessage(loading.message_id);
+      const goalsTime = await checkGoalCompletion(uid);
+      const goals = await initializeUserGoals(uid);
+      goalsApi = goalsTime || goals;
 
-    await ctx.replyWithMarkdown(
-      `⚡ *Готово!*  
+      const goalsInProgress = goalsApi.filter(g => g.status === 'in_progress');
+      const goalsDone = goalsApi.filter(g => g.status === 'completed');
+
+      if (goalsInProgress.length === 0 && goalsDone.length === 0) {
+        await ctx.deleteMessage(loading.message_id);
+        return ctx.reply('😴 Пока ничего нет — пора действовать. Возьми цели и начни движение.');
+      }
+
+
+      const generateText = await getGeneraleText(userData.telegramId, goalsDone, goalsInProgress);
+
+      await ctx.deleteMessage(loading.message_id);
+
+      await ctx.replyWithMarkdown(
+        `⚡ *Готово!*  
       Сообщение собрано — это твой сегодняшний отчёт.  
       Скопируй или пересылай его в канал, группу или друзьям.  
       Пусть видят, что ты *в игре*. 🧊🔥`,
-      { parse_mode: 'Markdown' }
-    );
+        { parse_mode: 'Markdown' }
+      );
 
-    await ctx.reply(generateText);
-
+      await ctx.reply(generateText);
+    }
   } catch (err) {
     console.error('Ошибка генерации:', err);
     await ctx.deleteMessage(loading.message_id);
@@ -232,52 +239,59 @@ bot.action('show_goals', async (ctx) => {
   const loading = await ctx.reply('⏳ Загружаем твои цели...');
 
   try {
-    const uid = userIdApi;
-    const goalsTime = await checkGoalCompletion(uid);
-    const goals = await initializeUserGoals(uid);
+    const profile = await addProfile(ctx);
+    const uid = profile?.id;
+    if (uid) {
+      const goalsTime = await checkGoalCompletion(uid);
+      const goals = await initializeUserGoals(uid);
 
-    goalsApi = goalsTime || goals;
+      goalsApi = goalsTime || goals;
 
-    await ctx.deleteMessage(loading.message_id);
+      await ctx.deleteMessage(loading.message_id);
 
-    return ctx.reply(
-      `📋 Выбери категорию целей:`,
-      Markup.inlineKeyboard([
-        [Markup.button.callback('🟡 В процессе', 'in_progress_goals')],
-        [Markup.button.callback('✅ Выполненные цели', 'done_goals')],
-        [Markup.button.callback('❌ Закрыть', 'close_message')],
-      ])
-    );
+      return ctx.reply(
+        `📋 Выбери категорию целей:`,
+        Markup.inlineKeyboard([
+          [Markup.button.callback('🟡 В процессе', 'in_progress_goals')],
+          [Markup.button.callback('✅ Выполненные цели', 'done_goals')],
+          [Markup.button.callback('❌ Закрыть', 'close_message')],
+        ])
+      );
+    }
   } catch (err) {
     console.error(err);
     await ctx.reply('❌ Ошибка при загрузке целей, попробуй позже.');
   }
+
 });
 
 bot.action('done_goals', async (ctx) => {
   const loading = await ctx.reply('⏳ Проверяем выполненные цели...');
 
   try {
-    const uid = userIdApi;
-    const goalsTime = await checkGoalCompletion(uid);
-    const goals = await initializeUserGoals(uid);
+    const profile = await addProfile(ctx);
+    const uid = profile?.id;
+    if (uid) {
+      const goalsTime = await checkGoalCompletion(uid);
+      const goals = await initializeUserGoals(uid);
 
-    goalsApi = goalsTime || goals;
+      goalsApi = goalsTime || goals;
 
-    await ctx.deleteMessage(loading.message_id);
-    await ctx.answerCbQuery();
+      await ctx.deleteMessage(loading.message_id);
+      await ctx.answerCbQuery();
 
-    const done = (goalsApi || []).filter(g => g.status === "completed");
-    if (done.length === 0)
-      return ctx.reply('✅ Сегодня нет выполненных целей.', Markup.inlineKeyboard([
-        [Markup.button.callback('❌ Закрыть', 'close_message')],
-      ]));
+      const done = (goalsApi || []).filter(g => g.status === "completed");
+      if (done.length === 0)
+        return ctx.reply('✅ Сегодня нет выполненных целей.', Markup.inlineKeyboard([
+          [Markup.button.callback('❌ Закрыть', 'close_message')],
+        ]));
 
-    const msg = done.map((g, i) => `• ${g.title}`).join('\n');
-    await ctx.reply(
-      `✅ Выполненные сегодня цели:\n\n${msg}`,
-      Markup.inlineKeyboard([[Markup.button.callback('❌ Закрыть', 'close_message')]])
-    );
+      const msg = done.map((g, i) => `• ${g.title}`).join('\n');
+      await ctx.reply(
+        `✅ Выполненные сегодня цели:\n\n${msg}`,
+        Markup.inlineKeyboard([[Markup.button.callback('❌ Закрыть', 'close_message')]])
+      );
+    }
   } catch (err) {
     console.error(err);
     await ctx.reply('❌ Ошибка при загрузке целей.');
@@ -292,7 +306,7 @@ function buildInProgressKeyboard(inProgress, selectedSet) {
     const marker = isSelected ? '🟢' : '⚪️';
 
     const diff = maxLen - goal.title.length;
-    const pad = ' '.repeat(diff); 
+    const pad = ' '.repeat(diff);
     return [
       Markup.button.callback(
         `${marker} ${goal.title}${pad}`,
@@ -311,29 +325,32 @@ bot.action('in_progress_goals', async (ctx) => {
   const loading = await ctx.reply('⏳ Загружаем цели в процессе...');
 
   try {
-    const uid = userIdApi;
-    const goalsTime = await checkGoalCompletion(uid);
-    const goals = await initializeUserGoals(uid);
+    const profile = await addProfile(ctx);
+    const uid = profile?.id;
+    if (uid) {
+      const goalsTime = await checkGoalCompletion(uid);
+      const goals = await initializeUserGoals(uid);
 
-    goalsApi = goalsTime || goals;
+      goalsApi = goalsTime || goals;
 
-    await ctx.deleteMessage(loading.message_id);
-    await ctx.answerCbQuery();
+      await ctx.deleteMessage(loading.message_id);
+      await ctx.answerCbQuery();
 
-    const inProgress = (goalsApi || []).filter(g => g.status === 'in_progress');
-    if (inProgress.length === 0) {
-      return ctx.reply(`Пока нет целей в процессе.\n` + `Зайдите в мини приложение и возьмите себе целей`, Markup.inlineKeyboard([
-        [Markup.button.callback('❌ Закрыть', 'close_message')],
-      ]));
+      const inProgress = (goalsApi || []).filter(g => g.status === 'in_progress');
+      if (inProgress.length === 0) {
+        return ctx.reply(`Пока нет целей в процессе.\n` + `Зайдите в мини приложение и возьмите себе целей`, Markup.inlineKeyboard([
+          [Markup.button.callback('❌ Закрыть', 'close_message')],
+        ]));
+      }
+
+      const text =
+        `*Цели в процессе*\n\n` +
+        `Отметь выполненные задачи (нажми на них, чтобы поставить зелёную галочку), затем нажми "✅ Выполнить".`;
+
+      const sent = await ctx.replyWithMarkdown(text, buildInProgressKeyboard(inProgress, new Set()));
+
+      selectedByMessage.set(sent.message_id, new Set());
     }
-
-    const text =
-      `*Цели в процессе*\n\n` +
-      `Отметь выполненные задачи (нажми на них, чтобы поставить зелёную галочку), затем нажми "✅ Выполнить".`;
-
-    const sent = await ctx.replyWithMarkdown(text, buildInProgressKeyboard(inProgress, new Set()));
-
-    selectedByMessage.set(sent.message_id, new Set());
   } catch (err) {
     console.error(err);
     await ctx.reply('❌ Ошибка при загрузке целей.');
@@ -379,10 +396,18 @@ bot.action('Done_goals', async (ctx) => {
 
   try {
     await Promise.all(
-      chosen.map(g => {
-        getAllStatus(userIdApi, g.id, 'done')
-        addPoints(userIdApi, g.points)
-        addCompletedDate(userData.telegramId, until)
+      chosen.map(async (g) => {
+        try {
+          const profile = await addProfile(ctx);
+          const uid = profile?.id;
+          if (uid) {
+            getAllStatus(uid, g.id, 'done')
+            addPoints(uid, g.points)
+            addCompletedDate(userData.telegramId, until)
+          }
+        } catch (e) {
+
+        }
       })
     );
 
@@ -445,15 +470,15 @@ console.log('Бот запущен ✅');
 
 bot.telegram.getMe().then((botInfo) => {
   bot.options.username = botInfo.username;
-  
+
   cron.schedule('0 9 * * *', () => {
     sendDailyReminders('morning');
   });
-  
+
   cron.schedule('0 19 * * *', () => {
     sendDailyReminders('evening');
   });
-  
+
   console.log('Ежедневные напоминания запланированы');
 });
 
@@ -470,11 +495,11 @@ async function sendDailyReminders(timeOfDay) {
       `🌆 Вечер - время отчета! Поделись своими достижениями за день с помощью команды /generate`
     ]
   };
-  
+
   const isMorning = timeOfDay === 'morning';
   const messages = reminderMessages[timeOfDay];
   const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-  
+
   for (const userId of activeUsers) {
     try {
       await bot.telegram.sendMessage(userId, randomMessage, {
@@ -488,8 +513,8 @@ async function sendDailyReminders(timeOfDay) {
       });
     } catch (error) {
       console.error(`Не удалось отправить напоминание пользователю ${userId}:`, error.message);
-      
-    if (error.code === 403) {
+
+      if (error.code === 403) {
         activeUsers.delete(userId);
       }
     }
