@@ -18,6 +18,7 @@ let userData = null
 const selectedByMessage = new Map();
 
 const activeUsers = new Set();
+const notifiedUsers = new Set();
 
 const bot = new Telegraf(BOT_TOKEN);
 
@@ -32,7 +33,6 @@ bot.start(async (ctx) => {
     userIdApi = ctx.from.id;
     activeUsers.add(ctx.from.id);
   }
-
   if (userData) {
     await ctx.deleteMessage(loading.message_id);
     await ctx.reply(
@@ -52,7 +52,6 @@ bot.start(async (ctx) => {
 });
 
 bot.command('goals', async (ctx) => {
-  console.log(userIdApi)
   const loading = await ctx.reply('⏳ Загружаем твои цели...');
 
   try {
@@ -128,6 +127,7 @@ bot.action('generationLast', async (ctx) => {
   const profile = await addProfile(ctx);
   userData = profile
   const uid = profile?.id;
+  const userTag = profile?.usersTag;
 
   const goalsTime = await checkGoalCompletion(uid);
   const goals = await initializeUserGoals(uid);
@@ -143,7 +143,7 @@ bot.action('generationLast', async (ctx) => {
 
   try {
     if (userData.telegramId) {
-      await getGeneraleText(userData.telegramId, goalsDone, goalsInProgress);
+      await getGeneraleText(userTag, userData.telegramId, goalsDone, goalsInProgress);
 
       const profile = await addProfile(ctx);
 
@@ -189,7 +189,7 @@ bot.command('info', async (ctx) => {
     Маленькие шаги, сделанные стабильно — это и есть путь к реальным результатам.\n\n` +
     `Если у вас возникли какие-то вопросы, вы можете найти на них ответ в этом боте @keep\\_alive\\_Assistant\\_bot или же вы можете написать в группу с разработчиком`,
     Markup.inlineKeyboard([
-       [Markup.button.url('✉️ Группа с разработчиком', 'https://t.me/+b-7H62ruiww0ODdi')],
+      [Markup.button.url('✉️ Группа с разработчиком', 'https://t.me/+b-7H62ruiww0ODdi')],
       [Markup.button.callback('❌ Закрыть', 'close_message')],
     ])
   );
@@ -201,8 +201,8 @@ bot.action('generation', async (ctx) => {
     const profile = await addProfile(ctx);
     const uid = profile?.id;
     userData = profile
+    const userTag = profile?.usersTag
     if (uid) {
-
       const goalsTime = await checkGoalCompletion(uid);
       const goals = await initializeUserGoals(uid);
       goalsApi = goalsTime || goals;
@@ -216,7 +216,7 @@ bot.action('generation', async (ctx) => {
       }
 
 
-      const generateText = await getGeneraleText(userData.telegramId, goalsDone, goalsInProgress);
+      const generateText = await getGeneraleText(userTag, userData.telegramId, goalsDone, goalsInProgress);
 
       await ctx.deleteMessage(loading.message_id);
 
@@ -429,6 +429,40 @@ bot.action('Done_goals', async (ctx) => {
   }
 });
 
+bot.command('new', async (ctx) => {
+  const loading = await ctx.reply("⏳ Ищем последние изменения!");
+
+  try {
+    const profile = await addProfile(ctx);
+    const usersTag = profile?.usersTag;
+
+    if (usersTag) {
+      await ctx.deleteMessage(loading.message_id);
+
+      await ctx.replyWithMarkdown(
+        `⚔️ *Новые обновления бота и приложения* ⚔️\n\n` +
+        `Мы активно работаем над улучшением нашего бота и приложения!\n\n` +
+        `🔥 *Последнее обновление (10 ноября):*\n` +
+        `• Исправлены баги при первом входе в приложение - теперь оно не зависает\n` +
+        `• Все данные пользователей были удалены (извините за неудобства)\n` +
+        `• В бота добавлена новая команда /new\n` +
+        `• Теперь у каждого пользователя будет личный тег в дневном отчёте\n` +
+        `  Ваш тег: ${usersTag}\n\n` +
+        `🔧 *Текущая работа:*\n` +
+        `• Приложение будет сохранять ваш прогресс в течение месяца и в конце месяца присылать большой отчет с данными о ваших целях за месяц с процентами выполнения и возможно с графиком\n` +
+        `• Решение проблемы с историей, чтобы можно было легко выставлять картинку с вашим достижением в Telegram историю\n\n` +
+        `Следите за новостями и обновлениями в нашем боте!`,
+        Markup.inlineKeyboard([
+          [Markup.button.callback('❌ Закрыть', 'close_message')],
+        ])
+      );
+    }
+  } catch (error) {
+    console.log(`Ошибка при поиске последнего изменения: ${error}`);
+    await ctx.reply('❌ Произошла ошибка при получении обновлений. Попробуйте позже.');
+  }
+});
+
 bot.action('close_message', async (ctx) => {
   try {
     await ctx.deleteMessage();
@@ -534,6 +568,8 @@ process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
 
 
+
+
 const BOT_TOKEN_ = process.env.BOT_TOKEN_;
 
 const bot_ = new Telegraf(BOT_TOKEN_);
@@ -589,6 +625,7 @@ bot_.command('deleteGoals', async (ctx) => {
 });
 
 bot_.command('slowdowns', async (ctx) => {
+
   await ctx.replyWithMarkdown(
     `*Что делать, если бот или приложение медленно работают?*\n\n` +
     `Если такое произошло, то попробуйте следующие варианты: \n` +
@@ -606,6 +643,7 @@ bot_.command('slowdowns', async (ctx) => {
 });
 
 bot_.command('personalGoals', async (ctx) => {
+
   try {
     await ctx.replyWithPhoto(
       'https://i.postimg.cc/QC1DYsXx/Snimok-ekrana-2025-11-04-v-17-47-58.png',
@@ -634,6 +672,7 @@ bot_.action('message_close', async (ctx) => {
 });
 
 bot_.command('achievements', async (ctx) => {
+
   await ctx.replyWithMarkdown(
     `*Как получить достижение?*\n\n` +
     `Чтобы получить достижение, нужно выполнить определённое количество раз соответствующую цель.\n\n` +
@@ -679,7 +718,7 @@ bot_.command('continuation', async (ctx) => {
   );
 });
 
-bot_.action('support', async (ctx) => {
+bot_.command('support', async (ctx) => {
   try {
     await ctx.replyWithPhoto(
       { source: './Img/qr.jpg' },
@@ -691,7 +730,7 @@ bot_.action('support', async (ctx) => {
         parse_mode: 'Markdown',
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.url('💸 Поддержать проект', 'https://www.tinkoff.ru/rm/r_adpKgpwYuC.VvrLvQmxSb/GjWkK97277')],
-          [Markup.button.callback('❌ Закрыть', 'close_message')],
+          [Markup.button.callback('❌ Закрыть', 'message_close')],
         ]).reply_markup
       }
     );
