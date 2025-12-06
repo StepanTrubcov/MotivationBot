@@ -1,6 +1,7 @@
 import { Telegraf, Markup } from 'telegraf';
 import dotenv from 'dotenv';
-import { addProfile, initializeUserGoals, checkGoalCompletion, getAllStatus, addPoints, addCompletedDate, getGeneraleText } from './Api/Api.js';
+import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
+import { getUserData, generateSavingGoalsReport, getAllGoals, getUserSavingGoals, clearAllSavingGoals, getUserSavingGoalsWithAutoPeriod, removeSavingGoalFromToday, removePoints, deleteCompletedDate, updateSavingGoalStatus, addProfile, initializeUserGoals, checkGoalCompletion, getAllStatus, addPoints, addCompletedDate, getGeneraleText } from './Api/Api.js';
 import cron from 'node-cron';
 
 dotenv.config();
@@ -29,6 +30,7 @@ bot.start(async (ctx) => {
     userIdApi = profile?.id
     userData = profile
     activeUsers.add(ctx.from.id);
+    const goals = await initializeUserGoals(userIdApi);
   } catch (_) {
     userIdApi = ctx.from.id;
     activeUsers.add(ctx.from.id);
@@ -317,7 +319,7 @@ function buildInProgressKeyboard(inProgress, selectedSet) {
     ];
   });
 
-  rows.push([Markup.button.callback('✅ Выполнить', 'Done_goals')]);
+  rows.push([Markup.button.callback('✅ Выполнить', 'Done_goals')])
   rows.push([Markup.button.callback('❌ Закрыть', 'close_message')]);
 
   return Markup.inlineKeyboard(rows, { columns: 1 });
@@ -340,14 +342,14 @@ bot.action('in_progress_goals', async (ctx) => {
 
       const inProgress = (goalsApi || []).filter(g => g.status === 'in_progress');
       if (inProgress.length === 0) {
-        return ctx.reply(`Пока нет целей в процессе.\n` + `Зайдите в мини-приложение и возьмите себе цели`, Markup.inlineKeyboard([
+        return ctx.reply(`Нет целей в процессе.\n` + `Возможно вы их не взяли или уже все выполнили`, Markup.inlineKeyboard([
           [Markup.button.callback('❌ Закрыть', 'close_message')],
         ]));
       }
 
       const text =
         `*Цели в процессе*\n\n` +
-        `Отметь выполненные задачи (нажми на них, чтобы поставить зелёную галочку), затем нажми "✅ Выполнить".`;
+        `Отмете задачи (нажми на них, чтобы поставить зелёную галочку), затем нажмите на ✅ Выполнить`;
 
       const sent = await ctx.replyWithMarkdown(text, buildInProgressKeyboard(inProgress, new Set()));
 
@@ -381,7 +383,7 @@ bot.action(/^toggle_goal_(.+)$/, async (ctx) => {
   }
 });
 
-bot.action('Done_goals', async (ctx) => {
+bot.action('Delete_goals', async (ctx) => {
   const msg = ctx.callbackQuery.message;
   const msgId = msg?.message_id;
   const selected = selectedByMessage.get(msgId) || new Set();
@@ -392,7 +394,7 @@ bot.action('Done_goals', async (ctx) => {
 
   const chosen = (goalsApi || []).filter(g => selected.has(g.id));
 
-  const loading = await ctx.reply('⏳ Обновляем цели...');
+  const loading = await ctx.reply('⏳ Удаляем цели...');
 
   const until = new Date().toISOString().slice(0, 10);
 
@@ -402,16 +404,79 @@ bot.action('Done_goals', async (ctx) => {
         try {
           const profile = await addProfile(ctx);
           const uid = profile?.id;
+          const telegramId = profile?.telegramId
           if (uid) {
-            getAllStatus(uid, g.id, 'done')
-            addPoints(uid, g.points)
-            addCompletedDate(userData.telegramId, until)
+            if (g.status === 'completed') {
+              await removePoints(uid, g.points)
+              await deleteCompletedDate(telegramId, until)
+            }
+            await getAllStatus(uid, g.id, 'not_started')
+            await removeSavingGoalFromToday(telegramId, g.id)
           }
         } catch (e) {
 
         }
       })
     );
+
+    await ctx.deleteMessage(loading.message_id);
+
+    const resultText =
+      `Успешно удалено!\n\n` +
+      `Цели были добавлены в раздел "Все".\n\n` +
+      `Вы можете снова добавить эти цели в приложении!`;
+
+    await ctx.editMessageText(resultText, { reply_markup: { inline_keyboard: [] } });
+  } catch (e) {
+    console.error('Delete_goals error:', e.message);
+    await ctx.reply('❌ Ошибка при удалении целей, попробуй ещё раз.');
+  } finally {
+    selectedByMessage.delete(msgId);
+  }
+});
+
+bot.action('Done_goals', async (ctx) => {
+  const msg = ctx.callbackQuery.message;
+  const msgId = msg?.message_id;
+  const selected = selectedByMessage.get(msgId) || new Set();
+
+  if (selected.size === 0) {
+    return ctx.answerCbQuery('⚠️ Нет выбранных целей!', { show_alert: true });
+  }
+  const chosen = (goalsApi || []).filter(g => selected.has(g.id));
+
+  const loading = await ctx.reply('⏳ Обновляем цели...');
+
+  const until = new Date().toISOString().slice(0, 10);
+
+  try {
+    // Выполняем операции последовательно, а не параллельно
+    for (const g of chosen) {
+      try {
+        const profile = await addProfile(ctx);
+        const uid = profile?.id;
+        const telegramId = profile?.telegramId
+        if (uid) {
+          // Выполняем операции последовательно
+          getAllStatus(uid, g.id, 'done')
+          console.log('464')
+          addPoints(uid, g.points)
+          console.log('466')
+          addCompletedDate(telegramId, until)
+          console.log('468')
+
+          // Ждем завершения updateSavingGoalStatus
+          try {
+            await updateSavingGoalStatus(telegramId, until, g.id, "completed")
+            console.log('470 - Цель обновлена успешно:', g.id)
+          } catch (updateError) {
+            console.error('Ошибка при обновлении статуса цели:', g.id, updateError)
+          }
+        }
+      } catch (e) {
+        console.error('Ошибка при обработке цели:', g.id, e)
+      }
+    }
 
     await ctx.deleteMessage(loading.message_id);
 
@@ -429,40 +494,6 @@ bot.action('Done_goals', async (ctx) => {
   }
 });
 
-bot.command('new', async (ctx) => {
-  const loading = await ctx.reply("⏳ Ищем последние изменения!");
-
-  try {
-    const profile = await addProfile(ctx);
-    const usersTag = profile?.usersTag;
-
-    if (usersTag) {
-      await ctx.deleteMessage(loading.message_id);
-
-      await ctx.replyWithMarkdown(
-        `⚔️ *Новые обновления бота и приложения* ⚔️\n\n` +
-        `Мы активно работаем над улучшением нашего бота и приложения!\n\n` +
-        `🔥 *Последнее обновление (10 ноября):*\n` +
-        `• Исправлены баги при первом входе в приложение - теперь оно не зависает\n` +
-        `• Все данные пользователей были удалены (извините за неудобства)\n` +
-        `• В бота добавлена новая команда /new\n` +
-        `• Теперь у каждого пользователя будет личный тег в дневном отчёте\n` +
-        `  Ваш тег: ${usersTag}\n\n` +
-        `🔧 *Текущая работа:*\n` +
-        `• Приложение будет сохранять ваш прогресс в течение месяца и в конце месяца присылать большой отчет с данными о ваших целях за месяц с процентами выполнения и возможно с графиком\n` +
-        `• Решение проблемы с историей, чтобы можно было легко выставлять картинку с вашим достижением в Telegram историю\n\n` +
-        `Следите за новостями и обновлениями в нашем боте!`,
-        Markup.inlineKeyboard([
-          [Markup.button.callback('❌ Закрыть', 'close_message')],
-        ])
-      );
-    }
-  } catch (error) {
-    console.log(`Ошибка при поиске последнего изменения: ${error}`);
-    await ctx.reply('❌ Произошла ошибка при получении обновлений. Попробуйте позже.');
-  }
-});
-
 bot.action('close_message', async (ctx) => {
   try {
     await ctx.deleteMessage();
@@ -471,14 +502,14 @@ bot.action('close_message', async (ctx) => {
   }
 });
 
-bot.command('developer', async (ctx) => {
-  await ctx.replyWithMarkdown(
-    `👨‍💻 *Разработчики проекта*\n\n` +
-    `Этот бот и мини-приложение созданы двумя людьми — из желания помочь вам стать дисциплинированнее, сильнее и стабильнее.\n\n` +
-    `Если у тебя есть предложения, баги или идеи — не стесняйся писать!\n\n` +
-    `📨 Связаться можно по кнопке ниже 👇`,
+bot.command('news_channel', async (ctx) => {
+  await ctx.reply(
+    `НОВОСТИ ПО БОТУ И ПРИЛОЖЕНИЮ\n\n` +
+    `Этот бот и мини-приложение очень активно прокачиваются и обновляются.\n\n` +
+    `Чтобы знать все изменения и знать все крутые фичи вы можете подписаться на наш канал!\n\n` +
+    `Там мы постим все изменения и новые фичи !!! \n\n` +
+    `@Motivation_bot_channel`,
     Markup.inlineKeyboard([
-      [Markup.button.url('✉️ Группа с разработчиком', 'https://t.me/+b-7H62ruiww0ODdi')],
       [Markup.button.callback('❌ Закрыть', 'close_message')]
     ])
   );
@@ -501,23 +532,190 @@ bot.command('support', async (ctx) => {
   );
 });
 
+bot.command('a', async (ctx) => {
+  sendWeeklyReport()
+});
+
 bot.launch();
 console.log('Бот запущен ✅');
 
 bot.telegram.getMe().then((botInfo) => {
   bot.options.username = botInfo.username;
 
+  // 7 утра
   cron.schedule('0 4 * * *', () => {
     sendDailyReminders('morning');
   });
 
-  // 9 PM Moscow = 6 PM UTC => 0 18 * * *
+  // 9 вечера
   cron.schedule('0 18 * * *', () => {
     sendDailyReminders('evening');
   });
 
+
+  // каждое воскресенье в 10 утра
+  cron.schedule('0 7 * * 0', () => {
+    sendWeeklyReport();
+  });
+
   console.log('Ежедневные напоминания запланированы на 7:00 и 21:00 по Московскому времени');
 });
+
+async function sendWeeklyReport() {
+  for (const userId of activeUsers) {
+    try {
+      //userId
+      const profile = await getUserData(userId)
+
+      const goals = await getAllGoals(profile.id);
+
+      const savingGoals = await getUserSavingGoals(profile.telegramId)
+
+
+      const arrayIdGoals = [];
+
+      const targetDates = [];
+
+      for (let i = 0; i < 7; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        targetDates.push(date.toISOString().split('T')[0]);
+      }
+
+      const matchingGoals = savingGoals.savingGoals.filter(item =>
+        targetDates.includes(item.date)
+      );
+
+
+      matchingGoals.forEach(item => {
+        for (let i = 0; i < item.goalData.length; i++) {
+
+          const t = {
+            idGoals: item.goalData[i].idGoals,
+            status: item.goalData[i].status,
+            date: item.date,
+          }
+          arrayIdGoals.push(t)
+        }
+      });
+
+      const goalsArray = [];
+
+      arrayIdGoals.forEach(goalItem => {
+        const goal = goals.find(g => g.id == goalItem.idGoals);
+
+        if (goal) {
+          goalsArray.push({
+            id: goal.id,
+            title: goal.title,
+            status: goalItem.status,
+            date: goalItem.date,
+          });
+        }
+      });
+
+      const text = await generateSavingGoalsReport(profile.telegramId, 7, goalsArray);
+      console.log(text)
+      const chartData = text.reportData?.chartData;
+      const labels = chartData.dates;
+      const goalsCompletion = chartData.goalsCompletion;
+
+      try {
+        const width = 1200;
+        const height = 500;
+        const backgroundColour = 'white';
+
+        const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height, backgroundColour });
+
+        const PALETTE = ['#2E86AB', '#F6C85F', '#7BC043', '#FF6F61', '#6A4C93', '#F67E7D'];
+
+        function hexToRgba(hex, alpha = 1) {
+          const h = hex.replace('#', '');
+          const bigint = parseInt(h, 16);
+          const r = (bigint >> 16) & 255;
+          const g = (bigint >> 8) & 255;
+          const b = bigint & 255;
+          return `rgba(${r},${g},${b},${alpha})`;
+        }
+
+        const dates = labels;
+        const goalIds = Object.keys(goalsCompletion);
+        const goalsCount = Math.max(goalIds.length, 1);
+
+        const percentPerDate = dates.map((_, dayIndex) => {
+          let done = 0;
+          for (const goalId of goalIds) {
+            const g = goalsCompletion[goalId];
+            const v = g && g.completions && g.completions[dayIndex] ? 1 : 0;
+            done += v;
+          }
+          return done / goalsCount;
+        });
+
+        const mainColor = PALETTE[0];
+
+        const datasets = [{
+          label: 'Процент выполнения целей',
+          data: percentPerDate,
+          borderColor: hexToRgba(mainColor, 1),
+          backgroundColor: hexToRgba(mainColor, 0.12),
+          fill: true,
+          tension: 0.25,
+          borderWidth: 3,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          pointBackgroundColor: percentPerDate.map(p => p >= 1 ? hexToRgba(mainColor, 1) : (p > 0 ? hexToRgba(mainColor, 0.9) : 'rgba(200,200,200,0.6)')),
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2,
+          cubicInterpolationMode: 'monotone'
+        }];
+
+        const config = {
+          type: 'line',
+          data: { labels: dates, datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              title: { display: true, text: 'Выполнение целей по дням' },
+              legend: { display: true },
+              tooltip: {
+                callbacks: {
+                  label: (tt) => `${tt.dataset.label}: ${Math.round(tt.parsed.y * 100)}%`
+                }
+              }
+            },
+            scales: {
+              y: {
+                min: 0, max: 1,
+                ticks: {
+                  callback: (v) => `${Math.round(v * 100)}%`
+                }
+              }
+            }
+          }
+        };
+
+        const imageBuffer = await chartJSNodeCanvas.renderToBuffer(config);
+
+        await bot.telegram.sendMessage(userId, text.reportText);
+
+        await bot.telegram.sendPhoto(userId, { source: imageBuffer }, {
+          caption: 'График выполнения ваших целей'
+        });
+
+      } catch (error) {
+        console.error('Ошибка при генерации графика:', error);
+        await bot.telegram.sendMessage(userId, text.reportText);
+      }
+
+
+    } catch (e) {
+      console.log('Ошибка при запросе за большим недельным отчётом:', e)
+    }
+
+  }
+}
 
 async function sendDailyReminders(timeOfDay) {
   const reminderMessages = {
@@ -533,12 +731,52 @@ async function sendDailyReminders(timeOfDay) {
     ]
   };
 
-  const isMorning = timeOfDay === 'morning';
   const messages = reminderMessages[timeOfDay];
   const randomMessage = messages[Math.floor(Math.random() * messages.length)];
 
   for (const userId of activeUsers) {
     try {
+      if (timeOfDay === 'morning') {
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const day = yesterday.toISOString().split('T')[0];
+
+        const savingGoalsDay = await getUserSavingGoalsWithAutoPeriod(userId)
+
+        const savingGoals = await getUserSavingGoals(userId)
+
+        const TheLastNumber = savingGoals.savingGoals?.length - 1
+
+        const TheLastDay = savingGoals?.savingGoals[TheLastNumber]
+
+        if (day === TheLastDay) {
+          const deleteSavingGoals = await clearAllSavingGoals(userId)
+
+          await bot.telegram.sendMessage(userId, 'У вас нет целей возможно вы их не взяли или у них закончился срок выполнения❗️\n Нужно зайти в приложение и снова взять себе цели', {
+            reply_markup: {
+              inline_keyboard: [
+                [Markup.button.webApp('🚀 Открыть приложение', WEB_APP_URL)]
+              ]
+            }
+          });
+
+        }
+
+        if (savingGoalsDay.savingGoals?.length !== 0) {
+          let i = savingGoalsDay.savingGoals.length - 1
+          if (savingGoalsDay.savingGoals[i].goalData.length === 0) {
+            await bot.telegram.sendMessage(userId, 'У ваших целей истёк срок выполнения❗️\n Нужно зайти в приложение и снова взять себе цель', {
+              reply_markup: {
+                inline_keyboard: [
+                  [Markup.button.webApp('🚀 Открыть приложение', WEB_APP_URL)]
+                ]
+              }
+            });
+          }
+        }
+
+      }
       await bot.telegram.sendMessage(userId, randomMessage, {
         reply_markup: {
           inline_keyboard: [
@@ -548,7 +786,7 @@ async function sendDailyReminders(timeOfDay) {
           ]
         }
       });
-      } catch (error) {
+    } catch (error) {
       console.error(`Не удалось отправить напоминание пользователю ${userId}:`, error.message);
 
       if (error.code === 403) {
@@ -560,6 +798,10 @@ async function sendDailyReminders(timeOfDay) {
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
+
+
+
+
 
 
 
@@ -587,7 +829,7 @@ bot_.command('start', async (ctx) => {
     `/quantity - Сколько целей можно себе брать?\n` +
     `/continuation - Что будет дальше с проектом?\n\n` +
 
-    `Если вы не нашли ответ на свой вопрос, то вы можете задать его в группе с разработчиком:\n https://t.me/+b-7H62ruiww0ODdi`
+    `Наш телеграмм канал:\n @Motivation_bot_channel`
   );
 });
 
@@ -740,6 +982,49 @@ bot_.command('support', async (ctx) => {
 });
 
 bot_.launch();
+
+process.once('SIGINT', () => bot_.stop('SIGINT'));
+process.once('SIGTERM', () => bot_.stop('SIGTERM'));
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const BOT_TOKEN_BOT = process.env.BOT_TOKEN_BOT;
+
+const bot_bot = new Telegraf(BOT_TOKEN_BOT);
+
+bot_bot.start(async (ctx) => {
+  await ctx.reply(
+    `👋 ${ctx.from.first_name} привет!\n\n` +
+    `Сейчас бот на техническом обслуживании!\n\n` +
+    `Разработчик запускает новое, крутое обновление\n` +
+    `У нас появился телеграмм канал!!! Переходи туда чтобы быть вкурсе всех обновлений @Motivation_bot_channel `,
+  )
+});
+
+bot_bot.command('goals', async (ctx) => {
+  await ctx.reply(
+    `👋 ${ctx.from.first_name} привет!\n\n` +
+    `Сейчас бот на техническом обслуживании!\n\n` +
+    `Разработчик запускает новое, крутое обновление\n` +
+    `У нас появился телеграмм канал!!! Переходи туда чтобы быть вкурсе всех обновлений @Motivation_bot_channel `,
+  )
+});
+
+bot_bot.launch();
 
 process.once('SIGINT', () => bot_.stop('SIGINT'));
 process.once('SIGTERM', () => bot_.stop('SIGTERM'));
