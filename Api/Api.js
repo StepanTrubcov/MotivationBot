@@ -241,10 +241,15 @@ export const getGeneraleText = async (userTag, telegramId, goalsDone, goalsInPro
       console.error("❌ Нет telegramId для отчёта");
       return;
     }
+
+    const today = new Date();
+    const formattedDate = today.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+
     const response = await axios.post(`${BASE_URL}/generate-report/${telegramId}`, {
       goalsDone,
       goalsInProgress,
       userTag,
+      formattedDate
     });
 
     const { message, success } = response.data;
@@ -291,38 +296,6 @@ export async function deleteCompletedDate(customUserId, date) {
   } catch (error) {
     console.error("Ошибка удаления даты:", error);
     throw error;
-  }
-}
-
-// Удаление очков у пользователя 
-export async function removePoints(customUserId, points) {
-  try {
-    const response = await axios.delete(`${BASE_URL}/users/${customUserId}/pts/increment`, {
-      data: { amount: points }
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Ошибка уменьшения очков:", error);
-    throw error;
-  }
-}
-
-// Удаление целей из большого массива
-export async function removeSavingGoalFromToday(userId, goalId) {
-  try {
-    const response = await axios.post(`${BASE_URL}/saving-goals/remove-today`, {
-      userId,
-      goalId
-    });
-
-    const userData = response.data.user || {};
-    const savingGoals = userData.savingGoals || [];
-
-    return { success: true, data: { ...userData, savingGoals } };
-  } catch (error) {
-    console.error('Ошибка при удалении цели с сегодняшней даты:', error);
-    const errorMessage = error.response?.data?.error || error.message || 'Неизвестная ошибка';
-    return { success: false, error: errorMessage };
   }
 }
 
@@ -408,6 +381,17 @@ export async function getUserData(telegramId) {
     return response.data;
   } catch (error) {
     console.error('Ошибка получения данных пользователя:', error);
+    throw error;
+  }
+}
+
+export async function getAllUserIds() {
+  try {
+    const response = await axios.get(`${BASE_URL}/users/all-ids`);
+    console.log(response.data)
+    return response.data;
+  } catch (error) {
+    console.error("Ошибка получения ID пользователей:", error);
     throw error;
   }
 }

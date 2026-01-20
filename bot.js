@@ -1,7 +1,7 @@
 import { Telegraf, Markup } from 'telegraf';
 import dotenv from 'dotenv';
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
-import { getUserData, generateSavingGoalsReport, getAllGoals, getUserSavingGoals, clearAllSavingGoals, getUserSavingGoalsWithAutoPeriod, removeSavingGoalFromToday, removePoints, deleteCompletedDate, updateSavingGoalStatus, addProfile, initializeUserGoals, checkGoalCompletion, getAllStatus, addPoints, addCompletedDate, getGeneraleText } from './Api/Api.js';
+import { getAllUserIds, getUserData, generateSavingGoalsReport, getAllGoals, getUserSavingGoals, clearAllSavingGoals, getUserSavingGoalsWithAutoPeriod, updateSavingGoalStatus, addProfile, initializeUserGoals, checkGoalCompletion, getAllStatus, addPoints, getGeneraleText } from './Api/Api.js';
 import cron from 'node-cron';
 
 dotenv.config();
@@ -37,15 +37,17 @@ bot.start(async (ctx) => {
   }
   if (userData) {
     await ctx.deleteMessage(loading.message_id);
-    await ctx.reply(
+    await ctx.replyWithMarkdown(
       `❄️ *Winter Arc запущен!* ❄️\n\n` +
       `👋 ${ctx.from.first_name}, хватит ждать — пришло время действовать.\n\n` +
       `🔥 Эта зима — проверка на прочность. Или ты растёшь и становишься сильнее, или остаёшься там же, где был.\n` +
       `🚀 Время прокачать дисциплину, привычки и характер. Здесь нет места слабости.\n\n` +
       `⚔️ *Winter Arc — это твой вызов.* Ответишь ли ты на него? 💀\n\n` +
+      `Наш телеграм канал *@Motivation_bot_channel*\n` +
+      `Бот с часто задаваемыми вопросами *@keep_alive_Assistant_bot*\n\n` +
       `Выбирай действие прямо сейчас:`,
       Markup.inlineKeyboard([
-        [Markup.button.webApp('🚀 Открыть приложение', WEB_APP_URL)],
+        [Markup.button.url('🚀 Открыть приложение', `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
         [Markup.button.callback('📋 Мои цели', 'show_goals')],
       ])
     );
@@ -105,10 +107,20 @@ bot.command('mini_aps', async (ctx) => {
   await ctx.replyWithMarkdown(
     `⚔️ Мини-приложение *Дневные достижения*\n\n`,
     Markup.inlineKeyboard([
-      [Markup.button.webApp('🚀 Открыть приложение', WEB_APP_URL)],
+      [Markup.button.url('🚀 Открыть приложение', `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
       [Markup.button.callback('❌ Закрыть', 'close_message')],
     ])
   );
+});
+
+bot.telegram.setChatMenuButton({
+  menu_button: {
+    type: 'web_app',
+    text: 'Open',
+    web_app: {
+      url: WEB_APP_URL
+    }
+  }
 });
 
 bot.command('generate', async (ctx) => {
@@ -118,7 +130,6 @@ bot.command('generate', async (ctx) => {
     `Сгенерируй отчёт о своих целях на сегодня — и поделись им в канале или группе. 💀`,
     Markup.inlineKeyboard([
       [Markup.button.callback('🔥 Сгенерировать отчёт', 'generation')],
-      [Markup.button.callback('🏆 Прошлый отчёт', 'generationLast')],
       [Markup.button.callback('❌ Закрыть', 'close_message')],
     ])
   );
@@ -174,24 +185,23 @@ bot.command('info', async (ctx) => {
     `📌 *Как это работает:*\n` +
     `1️⃣ Через кнопку "🚀 Открыть приложение" ты попадаешь в мини-приложение.\n` +
     `2️⃣ Там ты можешь:\n` +
-    `   • Брать цели на 30 дней.\n` +
+    `   • Брать цели на 30, 60, 120 дней.\n` +
     `   • Отмечать их выполнение.\n` +
     `   • Получать очки за прогресс.\n` +
-    `   • Открывать достижения.\n` +
+    `   • Получать достижения.\n` +
     `   • Смотреть календарь активности.\n` +
     `   • Генерировать отчёт для соцсетей или канала.\n` +
-    `3️⃣ В боте можно делать почти то же самое — поэтому не обязательно постоянно заходить в мини-приложение.\n\n` +
+    `3️⃣ В боте можно делать почти то же самое — поэтому не обязательно постоянно заходить в мини-приложение, но также бот будет каждую неделю и каждый месяц присылать большой отчёт с графиком!\n\n` +
 
-    `🔥 За каждую выполненную цель ты получаешь баллы — они отражают твою стабильность, силу воли и прогресс.\n\n` +
+    `🔥 За каждую выполненную цель ты получаешь очки — они отражают твою стабильность, силу воли и прогресс.\n\n` +
 
     `❄️ *Winter Arc* — сезонная часть проекта.  
     Его суть в том, чтобы прожить зиму не впустую: выстроить привычки, укрепить дисциплину и не дать себе остановиться.\n\n` +
 
     `🧭 Используй бота и мини-приложение каждый день.  
     Маленькие шаги, сделанные стабильно — это и есть путь к реальным результатам.\n\n` +
-    `Если у вас возникли какие-то вопросы, вы можете найти на них ответ в этом боте @keep\\_alive\\_Assistant\\_bot или же вы можете написать в группу с разработчиком`,
+    `Если у вас возникли какие-то вопросы, вы можете найти на них ответ в этом боте @keep\\_alive\\_Assistant\\_bot или же вы можете написать в комментарии в нашем канале *@Motivation_bot_channel*`,
     Markup.inlineKeyboard([
-      [Markup.button.url('✉️ Группа с разработчиком', 'https://t.me/+b-7H62ruiww0ODdi')],
       [Markup.button.callback('❌ Закрыть', 'close_message')],
     ])
   );
@@ -223,10 +233,10 @@ bot.action('generation', async (ctx) => {
       await ctx.deleteMessage(loading.message_id);
 
       await ctx.replyWithMarkdown(
-        `⚡ *Готово!*  
-      Сообщение собрано — это твой сегодняшний отчёт.  
-      Скопируй или пересылай его в канал, группу или друзьям.  
-      Пусть видят, что ты *в игре*. 🧊🔥`,
+        `⚡ *Готово!*\n` +
+        `Сообщение собрано — это твой сегодняшний отчёт.\n` +
+        `Скопируй или пересылай его в канал, группу или друзьям.\n` +
+        `Пусть видят, что ты *в игре*. 🧊🔥`,
         { parse_mode: 'Markdown' }
       );
 
@@ -459,11 +469,7 @@ bot.action('Done_goals', async (ctx) => {
         if (uid) {
           // Выполняем операции последовательно
           getAllStatus(uid, g.id, 'done')
-          console.log('464')
           addPoints(uid, g.points)
-          console.log('466')
-          addCompletedDate(telegramId, until)
-          console.log('468')
 
           // Ждем завершения updateSavingGoalStatus
           try {
@@ -562,158 +568,197 @@ bot.telegram.getMe().then((botInfo) => {
 });
 
 async function sendWeeklyReport() {
-  for (const userId of activeUsers) {
-    try {
-      //userId
-      const profile = await getUserData(userId)
+  try {
+    // Получаем все Telegram ID пользователей
+    const telegramUsers = await getAllUserIds();
+    const mapTelegramId = telegramUsers.map(t => t.telegramId);
 
-      const goals = await getAllGoals(profile.id);
+    console.log(`Найдено ${mapTelegramId.length} пользователей для отправки отчетов`);
 
-      const savingGoals = await getUserSavingGoals(profile.telegramId)
-
-
-      const arrayIdGoals = [];
-
-      const targetDates = [];
-
-      for (let i = 0; i < 7; i++) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        targetDates.push(date.toISOString().split('T')[0]);
-      }
-
-      const matchingGoals = savingGoals.savingGoals.filter(item =>
-        targetDates.includes(item.date)
-      );
-
-
-      matchingGoals.forEach(item => {
-        for (let i = 0; i < item.goalData.length; i++) {
-
-          const t = {
-            idGoals: item.goalData[i].idGoals,
-            status: item.goalData[i].status,
-            date: item.date,
-          }
-          arrayIdGoals.push(t)
-        }
-      });
-
-      const goalsArray = [];
-
-      arrayIdGoals.forEach(goalItem => {
-        const goal = goals.find(g => g.id == goalItem.idGoals);
-
-        if (goal) {
-          goalsArray.push({
-            id: goal.id,
-            title: goal.title,
-            status: goalItem.status,
-            date: goalItem.date,
-          });
-        }
-      });
-
-      const text = await generateSavingGoalsReport(profile.telegramId, 7, goalsArray);
-      console.log(text)
-      const chartData = text.reportData?.chartData;
-      const labels = chartData.dates;
-      const goalsCompletion = chartData.goalsCompletion;
-
+    // Обрабатываем каждого пользователя по очереди
+    for (const userId of mapTelegramId) {
       try {
-        const width = 1200;
-        const height = 500;
-        const backgroundColour = 'white';
+        console.log(`Отправка отчета пользователю: ${userId}`);
 
-        const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height, backgroundColour });
-
-        const PALETTE = ['#2E86AB', '#F6C85F', '#7BC043', '#FF6F61', '#6A4C93', '#F67E7D'];
-
-        function hexToRgba(hex, alpha = 1) {
-          const h = hex.replace('#', '');
-          const bigint = parseInt(h, 16);
-          const r = (bigint >> 16) & 255;
-          const g = (bigint >> 8) & 255;
-          const b = bigint & 255;
-          return `rgba(${r},${g},${b},${alpha})`;
+        // Получаем данные пользователя
+        const profile = await getUserData(userId);
+        if (!profile || !profile.id) {
+          console.log(`Пользователь с ID ${userId} не найден, пропускаем`);
+          continue;
         }
 
-        const dates = labels;
-        const goalIds = Object.keys(goalsCompletion);
-        const goalsCount = Math.max(goalIds.length, 1);
+        const goals = await getAllGoals(profile.id);
+        const savingGoals = await getUserSavingGoals(profile.telegramId);
 
-        const percentPerDate = dates.map((_, dayIndex) => {
-          let done = 0;
-          for (const goalId of goalIds) {
-            const g = goalsCompletion[goalId];
-            const v = g && g.completions && g.completions[dayIndex] ? 1 : 0;
-            done += v;
+        // Формируем массив целей за последние 7 дней
+        const arrayIdGoals = [];
+        const targetDates = [];
+
+        for (let i = 0; i < 7; i++) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          targetDates.push(date.toISOString().split('T')[0]);
+        }
+
+        const matchingGoals = savingGoals.savingGoals?.filter(item =>
+          targetDates.includes(item.date)
+        ) || [];
+
+        matchingGoals.forEach(item => {
+          for (let i = 0; i < item.goalData.length; i++) {
+            const t = {
+              idGoals: item.goalData[i].idGoals,
+              status: item.goalData[i].status,
+              date: item.date,
+            };
+            arrayIdGoals.push(t);
           }
-          return done / goalsCount;
         });
 
-        const mainColor = PALETTE[0];
+        const goalsArray = [];
+        arrayIdGoals.forEach(goalItem => {
+          const goal = goals.find(g => g.id == goalItem.idGoals);
+          if (goal) {
+            goalsArray.push({
+              id: goal.id,
+              title: goal.title,
+              status: goalItem.status,
+              date: goalItem.date,
+            });
+          }
+        })
 
-        const datasets = [{
-          label: 'Процент выполнения целей',
-          data: percentPerDate,
-          borderColor: hexToRgba(mainColor, 1),
-          backgroundColor: hexToRgba(mainColor, 0.12),
-          fill: true,
-          tension: 0.25,
-          borderWidth: 3,
-          pointRadius: 6,
-          pointHoverRadius: 8,
-          pointBackgroundColor: percentPerDate.map(p => p >= 1 ? hexToRgba(mainColor, 1) : (p > 0 ? hexToRgba(mainColor, 0.9) : 'rgba(200,200,200,0.6)')),
-          pointBorderColor: '#ffffff',
-          pointBorderWidth: 2,
-          cubicInterpolationMode: 'monotone'
-        }];
+        await bot.telegram.sendMessage(
+          userId,
+          `👋 Привет, ${profile.firstName}!
 
-        const config = {
-          type: 'line',
-          data: { labels: dates, datasets },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              title: { display: true, text: 'Выполнение целей по дням' },
-              legend: { display: true },
-              tooltip: {
-                callbacks: {
-                  label: (tt) => `${tt.dataset.label}: ${Math.round(tt.parsed.y * 100)}%`
-                }
-              }
-            },
-            scales: {
-              y: {
-                min: 0, max: 1,
-                ticks: {
-                  callback: (v) => `${Math.round(v * 100)}%`
-                }
-              }
+Вот и воскресенье — неделя позади 🕊  
+Самое время посмотреть, как ты продвинулся(лась).
+
+📈 Я подготовил для тебя недельный отчёт!  
+Листай ниже и не забудь похвалить себя 🤗`
+        );
+
+        // Генерируем отчет
+        const text = await generateSavingGoalsReport(profile.telegramId, 7, goalsArray);
+
+        if (!text || !text.success) {
+          console.log(`Не удалось сгенерировать отчет для пользователя ${userId}`);
+          continue;
+        }
+
+        // Отправляем текстовый отчет
+        await bot.telegram.sendMessage(userId, text.reportText);
+        console.log(`Текстовый отчет отправлен пользователю: ${userId}`);
+
+        // Генерируем и отправляем график, если есть данные
+        const chartData = text.reportData?.chartData;
+        if (chartData && chartData.dates && chartData.goalsCompletion) {
+          try {
+            const width = 1200;
+            const height = 500;
+            const backgroundColour = 'white';
+
+            const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height, backgroundColour });
+
+            const PALETTE = ['#2E86AB', '#F6C85F', '#7BC043', '#FF6F61', '#6A4C93', '#F67E7D'];
+
+            function hexToRgba(hex, alpha = 1) {
+              const h = hex.replace('#', '');
+              const bigint = parseInt(h, 16);
+              const r = (bigint >> 16) & 255;
+              const g = (bigint >> 8) & 255;
+              const b = bigint & 255;
+              return `rgba(${r},${g},${b},${alpha})`;
             }
+
+            const dates = chartData.dates;
+            const goalsCompletion = chartData.goalsCompletion;
+            const goalIds = Object.keys(goalsCompletion);
+            const goalsCount = Math.max(goalIds.length, 1);
+
+            const percentPerDate = dates.map((_, dayIndex) => {
+              let done = 0;
+              for (const goalId of goalIds) {
+                const g = goalsCompletion[goalId];
+                const v = g && g.completions && g.completions[dayIndex] ? 1 : 0;
+                done += v;
+              }
+              return done / goalsCount;
+            });
+
+            const mainColor = PALETTE[0];
+
+            const datasets = [{
+              label: 'Процент выполнения целей',
+              data: percentPerDate,
+              borderColor: hexToRgba(mainColor, 1),
+              backgroundColor: hexToRgba(mainColor, 0.12),
+              fill: true,
+              tension: 0.25,
+              borderWidth: 3,
+              pointRadius: 6,
+              pointHoverRadius: 8,
+              pointBackgroundColor: percentPerDate.map(p => p >= 1 ? hexToRgba(mainColor, 1) : (p > 0 ? hexToRgba(mainColor, 0.9) : 'rgba(200,200,200,0.6)')),
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              cubicInterpolationMode: 'monotone'
+            }];
+
+            const config = {
+              type: 'line',
+              data: { labels: dates, datasets },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  title: { display: true, text: 'Выполнение целей по дням' },
+                  legend: { display: true },
+                  tooltip: {
+                    callbacks: {
+                      label: (tt) => `${tt.dataset.label}: ${Math.round(tt.parsed.y * 100)}%`
+                    }
+                  }
+                },
+                scales: {
+                  y: {
+                    min: 0, max: 1,
+                    ticks: {
+                      callback: (v) => `${Math.round(v * 100)}%`
+                    }
+                  }
+                }
+              }
+            };
+
+            const imageBuffer = await chartJSNodeCanvas.renderToBuffer(config);
+
+            await bot.telegram.sendPhoto(userId, { source: imageBuffer }, {
+              caption: 'График выполнения ваших целей'
+            });
+
+            console.log(`График отправлен пользователю: ${userId}`);
+
+          } catch (chartError) {
+            console.error(`Ошибка при генерации графика для пользователя ${userId}:`, chartError.message);
+            // Продолжаем работу даже если график не сгенерировался
           }
-        };
+        }
 
-        const imageBuffer = await chartJSNodeCanvas.renderToBuffer(config);
+        // Небольшая пауза между отправками, чтобы не перегружать API
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        await bot.telegram.sendMessage(userId, text.reportText);
-
-        await bot.telegram.sendPhoto(userId, { source: imageBuffer }, {
-          caption: 'График выполнения ваших целей'
-        });
-
-      } catch (error) {
-        console.error('Ошибка при генерации графика:', error);
-        await bot.telegram.sendMessage(userId, text.reportText);
+      } catch (userError) {
+        console.error(`Ошибка при обработке пользователя ${userId}:`, userError.message);
+        // Продолжаем обработку следующего пользователя
+        continue;
       }
-
-
-    } catch (e) {
-      console.log('Ошибка при запросе за большим недельным отчётом:', e)
     }
 
+    console.log('Все еженедельные отчеты отправлены');
+
+  } catch (error) {
+    console.error('Критическая ошибка в sendWeeklyReport:', error);
   }
 }
 
@@ -734,7 +779,10 @@ async function sendDailyReminders(timeOfDay) {
   const messages = reminderMessages[timeOfDay];
   const randomMessage = messages[Math.floor(Math.random() * messages.length)];
 
-  for (const userId of activeUsers) {
+  const telegramUsers = await getAllUserIds();
+  const mapTelegramId = telegramUsers.map(t => t.telegramId);
+
+  for (const userId of mapTelegramId) {
     try {
       if (timeOfDay === 'morning') {
 
@@ -756,7 +804,7 @@ async function sendDailyReminders(timeOfDay) {
           await bot.telegram.sendMessage(userId, 'У вас нет целей возможно вы их не взяли или у них закончился срок выполнения❗️\n Нужно зайти в приложение и снова взять себе цели', {
             reply_markup: {
               inline_keyboard: [
-                [Markup.button.webApp('🚀 Открыть приложение', WEB_APP_URL)]
+                [Markup.button.url('🚀 Открыть приложение', `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
               ]
             }
           });
@@ -810,7 +858,6 @@ process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
 
 
-
 const BOT_TOKEN_ = process.env.BOT_TOKEN_;
 
 const bot_ = new Telegraf(BOT_TOKEN_);
@@ -821,88 +868,345 @@ bot_.command('start', async (ctx) => {
     `Если у вас возникли какие-то вопросы по нашему приложению или боту, вы можете найти ответы здесь.\n\n` +
 
     `*Частые вопросы:*\n` +
+    `/why - Зачем нужен бот Дневные достижения?\n` +
     `/newGoals - Как взять себе цели?\n` +
-    `/deleteGoals - Как удалить у себя цели?\n\n` +
-    `/slowdowns - Что делать, если бот или приложение медленно работают?\n` +
+    `/accomplishment - Как выполнить или отменить выполнение цели?\n` +
+    `/deleteGoals - Как удалить у себя цель?\n` +
     `/personalGoals - Как добавить свою личную цель?\n` +
-    `/achievements - Как получить достижение?\n` +
-    `/quantity - Сколько целей можно себе брать?\n` +
-    `/continuation - Что будет дальше с проектом?\n\n` +
+    `/yesterday - Что делать если забыл отметить вчера цели?\n` +
+    `/report - Откуда взять дневной/недельный/месяцный отчёт?\n` +
+    `/achievements - Как получить ачивку?\n` +
+    `/history - Как поделиться ачивкой?\n` +
+    `/continuation - Что будет дальше с проектом?\n` +
+    `/slowdowns - Что делать, если бот или приложение медленно работают?\n\n` +
 
-    `Наш телеграмм канал:\n @Motivation_bot_channel`
+    `Если вы не нашли ответ на свой вопрос напишите его в комментариях в нашем канале\n` +
+    `Наш телеграмм канал: *@Motivation_bot_channel*`
   );
 });
 
-bot_.command('newGoals', async (ctx) => {
+
+bot_.command('why', async (ctx) => {
   try {
-    await ctx.replyWithPhoto(
-      'https://i.postimg.cc/3w5R3Lq5/Snimok-ekrana-2025-11-04-v-16-56-03.png',
+
+    await ctx.replyWithMarkdown(
+      `*🚀 Зачем нужен бот «Дневные достижения»?*
+
+Дисциплина — это главная мышца успеха.  
+Именно она отличает тех, кто *хочет*, от тех, кто *делает*.
+
+*«Дневные достижения»* — это не просто трекер задач.  
+Это инструмент, который помогает вам:
+• формировать полезные привычки  
+• доводить цели до конца  
+• видеть реальный прогресс, а не иллюзию занятости  
+
+---
+
+✨ *Основные возможности бота:*
+• 🎯 Ставьте цели на *30 / 60 / 120 дней*
+• ✅ Отмечайте ежедневное выполнение
+• 🏆 Получайте очки и уникальные достижения
+• 📊 Анализируйте прогресс через отчёты
+• ❄️ Участвуйте в *Winter Arc* — зимней программе развития
+
+---
+
+💡 *Главная цель «Дневных достижений»*  
+Помочь вам **прокачать дисциплину** — ту самую внутреннюю силу,  
+которая делает результат неизбежным.
+
+Маленькие шаги каждый день → большие изменения в жизни 🌱  
+Начните сегодня — и поблагодарите себя завтра.
+`,
       {
-        caption:
-          `*Как взять себе цели?*\n\n` +
-          `Чтобы взять себе цели, нужно зайти в раздел "Доступные цели". Там среди разных категорий нужно выбрать цель, которую хотите, и нажать на неё. Откроется окно, в котором нужно будет нажать на кнопку "Взять цель на 30 дней". Всё готово! Теперь эта цель переместится в раздел "В процессе".`,
-        parse_mode: 'Markdown',
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback('❌ Закрыть', 'message_close')],
         ]).reply_markup
-      }
-    );
+      });
+
   } catch (error) {
     console.error('Error sending newGoals photo:', error);
     await ctx.reply('❌ Произошла ошибка при загрузке изображения. Попробуйте позже.');
   }
 });
 
-bot_.command('deleteGoals', async (ctx) => {
-  await ctx.replyWithMarkdown(
-    `*Как удалить у себя цели?*\n\n` +
-    `Извините, но пока цели нельзя удалять, но наши разработчики уже работают над этим.`,
-    {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('❌ Закрыть', 'message_close')],
-      ]).reply_markup
-    }
-  );
-});
 
-bot_.command('slowdowns', async (ctx) => {
-
-  await ctx.replyWithMarkdown(
-    `*Что делать, если бот или приложение медленно работают?*\n\n` +
-    `Если такое произошло, то попробуйте следующие варианты: \n` +
-    `1. Перезагрузить бота или приложение. \n` +
-    `2. Перезагрузить устройство. \n` +
-    `3. Проверить интернет-соединение. \n` +
-    `4. Проверить ВПН, возможно, вы забыли его выключить.\n\n` +
-    `Если ничего из этого не помогло, то попробуйте подождать. Возможно, ботом или приложением пользуется слишком много пользователей, и нужно подождать.`,
-    {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('❌ Закрыть', 'message_close')],
-      ]).reply_markup
-    }
-  );
-});
-
-bot_.command('personalGoals', async (ctx) => {
-
+bot_.command('newGoals', async (ctx) => {
   try {
-    await ctx.replyWithPhoto(
-      'https://i.postimg.cc/QC1DYsXx/Snimok-ekrana-2025-11-04-v-17-47-58.png',
+    await ctx.replyWithVideo(
+      'https://h.uguu.se/zvRunwAf.mp4',
       {
         caption:
-          `*Как добавить свою личную цель?*\n\n` +
-          `Чтобы добавить себе свою цель, нужно зайти в раздел "Доступные цели". Там справа от надписи "Цели" вы увидите зелёный круг с плюсиком, нужно нажать на него. Откроется окно, в котором нужно будет написать название цели, выбрать категорию цели и нажать на кнопку "Добавить цель". Всё готово! Теперь вы можете взять свою личную цель на 30 дней.`,
+          `*🎯 Как взять цель в приложении?*
+
+Следуйте этим простым шагам 👇
+
+1️⃣ Перейдите в раздел *«Цели»*  
+2️⃣ Откройте вкладку *«Доступные»*  
+3️⃣ Выберите цель, которую хотите выполнять  
+4️⃣ Нажмите на неё — откроется окно  
+5️⃣ Укажите на сколько хотите взять эту цель *(30 / 60 / 120 дней)*  
+6️⃣ Нажмите кнопку *«Взять цель»*
+
+✨ Готово!  
+Цель появится в разделе *«В процессе»*, и вы сможете отмечать выполнение каждый день.
+
+Маленькие действия сегодня → большие результаты завтра 🚀`,
         parse_mode: 'Markdown',
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback('❌ Закрыть', 'message_close')],
         ]).reply_markup
       }
     );
+
   } catch (error) {
-    console.error('Error sending personalGoals photo:', error);
+    console.error('Error sending newGoals video:', error);
+    await ctx.reply('❌ Произошла ошибка при загрузке видео. Попробуйте позже.');
+  }
+});
+
+
+bot_.command('accomplishment', async (ctx) => {
+  try {
+    await ctx.replyWithVideo(
+      'https://files.catbox.moe/502ahm.mp4',
+      {
+        caption:
+          `*✅ Как выполнить или отменить выполнение цели?*
+
+Есть *два способа* выполнить цель 👇
+
+🟢 *Способ 1 — в приложении прямо в списке целей*  
+Нажмите на цель *один раз* и дождитесь загрузки.  
+После выполнения рядом появится *зелёная галочка* ✅  
+
+🔄 *Чтобы отменить выполнение* — нажмите на эту же цель *второй раз* и дождитесь загрузки.
+
+📋 *Способ 2 —  в боте*  
+1️⃣ Найдите в меню или введите самостоятельно команду **/goals**  
+2️⃣ В сообщении выберите раздел **«В процессе»**  
+3️⃣ Нажмите на нужные цели  
+4️⃣ Нажмите кнопку **«Выполнить»**
+
+💡 Этот способ удобен, если у вас много активных целей.`,
+        parse_mode: 'Markdown',
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('❌ Закрыть', 'message_close')],
+        ]).reply_markup
+      }
+    );
+
+  } catch (error) {
+    console.error('Error sending newGoals photo:', error);
     await ctx.reply('❌ Произошла ошибка при загрузке изображения. Попробуйте позже.');
   }
 });
+
+
+bot_.command('deleteGoals', async (ctx) => {
+  await ctx.replyWithVideo(
+    'https://files.catbox.moe/tfmzzo.mp4',
+    {
+      caption:
+        `*🗑 Как удалить цель?*
+
+Если цель больше не актуальна, вы можете удалить её в любой момент 👇
+
+📌 *Пошагово:*  
+1️⃣ Найдите цель, которую хотите удалить  
+2️⃣ *Зажмите палец* на этой цели и подождите  
+3️⃣ Внизу появится *красная кнопка* **«Удалить цель»**  
+4️⃣ Нажмите на неё — цель будет удалена
+
+⚠️ *Обратите внимание:* после удаления цели её снова можно будет найти в разделе *Доступные* и взять её а прогресс на ей сохранится.`,
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('❌ Закрыть', 'message_close')],
+      ]).reply_markup
+    }
+  );
+
+});
+
+
+bot_.command('personalGoals', async (ctx) => {
+  await ctx.replyWithVideo(
+    'https://files.catbox.moe/jyuuwr.mp4',
+    {
+      caption:
+        `*➕ Как добавить свою личную цель?*
+
+Вы можете создать собственную цель, которая будет только у вас 👇
+
+📌 *Пошагово:*  
+1️⃣ Перейдите в раздел с целями  
+2️⃣ Вверху выберите вкладку **Доступные**  
+3️⃣ В правом верхнем углу нажмите кнопку **➕**  
+4️⃣ В открывшемся окне:
+   • введите *название цели*  
+   • выберите *категорию*, к которой она относится  
+5️⃣ Нажмите **«Добавить»**
+
+✅ Готово!  
+Ваша цель появится в выбранной категории.
+
+📍 *Что дальше?*  
+Теперь возьмите её как обычную цель — через список целей или команду **/newGoals**.`,
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('❌ Закрыть', 'message_close')],
+      ]).reply_markup
+    }
+  );
+
+});
+
+
+bot_.command('yesterday', async (ctx) => {
+  await ctx.replyWithVideo(
+    'https://files.catbox.moe/i2qea0.mp4',
+    {
+      caption:
+        `*⏪ Что делать, если вы забыли отметить цели вчера?*
+
+Не переживайте — бот позволяет откатиться на предыдущий день 👇
+
+📌 *Как это сделать:*  
+1️⃣ На главном экране внизу найдите слово **«Откат»** рядом будет кнопка **<**
+2️⃣ Нажмите на неё — откроется страница *вчерашних целей*  
+3️⃣ Выберите нужные цели и:
+   • выполните их ✅  
+   • или отмените выполнение ❌  
+
+📊 *Отчёт за вчера*  
+Внизу списка вчерашних целей есть кнопка **«Сгенерировать отчёт»**.  
+Нажмите её — и бот создаст для вас подробный отчёт за прошлый день.
+
+💡 Используйте откат, чтобы сохранять честную статистику и не терять прогресс.`,
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('❌ Закрыть', 'message_close')],
+      ]).reply_markup
+    }
+  );
+
+});
+
+
+bot_.command('report', async (ctx) => {
+  await ctx.replyWithVideo(
+    'https://files.catbox.moe/zre82m.mov',
+    {
+      caption:
+        `*📊 Откуда взять дневной/недельный/месяцный отчёт??*
+
+Бот автоматически помогает отслеживать ваши достижения на разных промежутках времени 👇
+
+🗓 *Дневной отчёт*  
+На главном экране есть кнопка **«Сгенерировать отчёт»**.  
+Нажмите на неё — бот создаст отчёт по *сегодняшним целям*.  
+Вы можете **скопировать текст** и отправить его куда угодно.
+
+📅 *Недельный отчёт*  
+Недельный отчёт **приходит автоматически**.  
+Бот присылает его **каждое воскресенье в 10:00** ⏰  
+В нём — ваш прогресс за всю неделю.
+
+🗓 *Месячный отчёт*  
+🚧 В разработке. Скоро станет доступен!
+
+💡 Отчёты помогают видеть реальный прогресс и сохранять мотивацию.`,
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('❌ Закрыть', 'message_close')],
+      ]).reply_markup
+    }
+  );
+
+});
+
+
+bot_.command('achievements', async (ctx) => {
+
+  await ctx.replyWithVideo(
+    'https://files.catbox.moe/9smom0.mp4',
+    {
+      caption:
+        `*🎖 Как получить ачивку?*\n\n` +
+        `1. Выберите ачивку, которую хотите получить.\n` +
+        `2. Нажмите на неё — вы увидите её анимацию.\n` +
+        `3. Под анимацией будет написано, что нужно сделать, чтобы получить эту ачивку.\n\n` +
+        `*⚠ Важно!* Эпические ачивки доступны только в определённый период. После его окончания получить их будет невозможно!\n` +
+        `Чтобы не пропустить эпические ачивки, следите за нашими новостями в канале *@Motivation_bot_channel*`
+      ,
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('❌ Закрыть', 'message_close')],
+      ]).reply_markup
+    }
+  );
+
+});
+
+
+bot_.command('history', async (ctx) => {
+
+  await ctx.replyWithVideo(
+    'https://files.catbox.moe/m2hfd6.mp4',
+    {
+      caption:
+        `*🎖 Как поделиться ачивкой (историей)*\n\n` +
+        `1. Выберите ачивку, которую хотите опубликовать. Обратите внимание: делиться можно только ачивками, которые у вас уже есть.\n` +
+        `2. Нажмите на неё — вы увидите её анимацию.\n` +
+        `3. Под анимацией появится кнопка *Поделиться / История*. Дождитесь, пока ачивка загрузится, и затем сможете опубликовать её в истории.\n\n` +
+        `*⚠ Важно!* Делиться можно только теми ачивками, которые вы действительно имеете.`
+      ,
+      parse_mode: 'Markdown',
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('❌ Закрыть', 'message_close')],
+      ]).reply_markup
+    }
+  );
+
+});
+
+
+bot_.command('continuation', async (ctx) => {
+  await ctx.replyWithMarkdown(
+    `*🚀 Что будет дальше с проектом?*\n\n` +
+    `Наши разработчики внимательно прислушиваются к вашим пожеланиям и идеям. У нас уже есть множество классных планов по развитию, и многое зависит от вашей поддержки! 🎯\n\n` +
+    `Теперь регулярно будут появляться новые ачивки разных редкостей, так что впереди много интересного! 🏅\n\n` +
+    `Наш продукт пока полностью бесплатный, но для дальнейшего развития и расширения проекта нам нужна поддержка. Мы будем очень благодарны за любую помощь — вместе мы сможем сделать проект ещё лучше! ❤️`,
+    {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('💖 Поддержать проект', 'support')],
+        [Markup.button.callback('❌ Закрыть', 'message_close')],
+      ]).reply_markup
+    }
+  );
+
+});
+
+
+bot_.command('slowdowns', async (ctx) => {
+
+  await ctx.replyWithMarkdown(
+    `*🐢 Что делать, если бот или приложение работают медленно?*\n\n` +
+    `Если вы заметили задержки или подвисания, попробуйте следующие шаги:\n` +
+    `1. Перезапустите бота или приложение.\n` +
+    `2. Проверьте VPN — возможно, он включён и замедляет соединение.\n` +
+    `3. Убедитесь, что интернет-соединение стабильно.\n\n` +
+    `Если это не помогает, подождите немного ⏳. Иногда бот или приложение перегружены из-за большого количества пользователей, и немного времени достаточно, чтобы всё снова работало быстро.`,
+    {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback('❌ Закрыть', 'message_close')],
+      ]).reply_markup
+    }
+  );
+
+});
+
 
 bot_.action('message_close', async (ctx) => {
   try {
@@ -910,53 +1214,6 @@ bot_.action('message_close', async (ctx) => {
   } catch (e) {
     console.error('message_close error:', e.message);
   }
-});
-
-bot_.command('achievements', async (ctx) => {
-
-  await ctx.replyWithMarkdown(
-    `*Как получить достижение?*\n\n` +
-    `Чтобы получить достижение, нужно выполнить определённое количество раз соответствующую цель.\n\n` +
-    `*Достижения и цели:*\n` +
-    `1. 90 дней бега - нужно выполнить цель "Пробежать 1 км" 90 раз\n` +
-    `2. Пятёрка выносливости - нужно выполнить цель "Пробежать 5 км" 60 раз\n` +
-    `3. Здоровый рацион - нужно выполнить цель "Провести день без сладкого" 60 раз\n` +
-    `4. Ледяная закалка - нужно выполнить цель "Облиться холодной водой" 60 раз\n` +
-    `5. Кодерский марафон - нужно выполнить цель "Кодить 1 час за ноутбуком" 60 раз\n` +
-    `6. Сила отжиманий - нужно выполнить цель "Сделать 20 отжиманий" 60 раз\n` +
-    `6. Книжный марафон - нужно выполнить цель "Читать книгу 20 минут" 60 раз\n` +
-    `7. Ранний старт - нужно выполнить цель "Рано проснуться" 60 раз`,
-    {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('❌ Закрыть', 'message_close')],
-      ]).reply_markup
-    }
-  );
-});
-
-bot_.command('quantity', async (ctx) => {
-  await ctx.replyWithMarkdown(
-    `*Сколько целей можно себе брать?*\n\n` +
-    `Можно брать столько целей, сколько хотите, главное — успевайте их выполнять!`,
-    {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('❌ Закрыть', 'message_close')],
-      ]).reply_markup
-    }
-  );
-});
-
-bot_.command('continuation', async (ctx) => {
-  await ctx.replyWithMarkdown(
-    `*Что будет дальше с проектом?*\n\n` +
-    `Наши разработчики будут прислушиваться к вашим пожеланиям и предложениям. Уже есть много классных идей для продвижения, так что всё зависит от вас и вашей поддержки! Наш продукт пока что бесплатный, а для продолжения и расширения проекта нужны большие средства, поэтому мы будем очень рады, если вы нас поддержите!`,
-    {
-      reply_markup: Markup.inlineKeyboard([
-        [Markup.button.callback('Поддержать проект', 'support')],
-        [Markup.button.callback('❌ Закрыть', 'message_close')],
-      ]).reply_markup
-    }
-  );
 });
 
 bot_.command('support', async (ctx) => {
