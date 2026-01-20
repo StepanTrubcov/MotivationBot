@@ -508,7 +508,7 @@ bot.action('close_message', async (ctx) => {
   }
 });
 
-bot.command('news_channel', async (ctx) => {
+bot.command('channel', async (ctx) => {
   await ctx.reply(
     `НОВОСТИ ПО БОТУ И ПРИЛОЖЕНИЮ\n\n` +
     `Этот бот и мини-приложение очень активно прокачиваются и обновляются.\n\n` +
