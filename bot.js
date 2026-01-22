@@ -19,7 +19,6 @@ let userData = null
 const selectedByMessage = new Map();
 
 const activeUsers = new Set();
-const notifiedUsers = new Set();
 
 const bot = new Telegraf(BOT_TOKEN);
 
@@ -817,7 +816,7 @@ async function sendDailyReminders(timeOfDay) {
             await bot.telegram.sendMessage(userId, 'У ваших целей истёк срок выполнения❗️\n Нужно зайти в приложение и снова взять себе цель', {
               reply_markup: {
                 inline_keyboard: [
-                  [Markup.button.webApp('🚀 Открыть приложение', WEB_APP_URL)]
+                  [Markup.button.url('🚀 Открыть приложение', `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
                 ]
               }
             });
@@ -830,7 +829,7 @@ async function sendDailyReminders(timeOfDay) {
           inline_keyboard: [
             [Markup.button.callback('📋 Мои цели', 'show_goals')],
             [Markup.button.callback('📊 Сгенерировать отчёт', 'generation')],
-            [Markup.button.webApp('🚀 Открыть приложение', WEB_APP_URL)]
+            [Markup.button.url('🚀 Открыть приложение', `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
           ]
         }
       });
