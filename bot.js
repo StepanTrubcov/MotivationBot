@@ -613,70 +613,106 @@ function generateWeeklySVG({ dates, percents, completions = [], totalGoals = 1 }
 
   const maxY = 100;
   const stepX = (width - padding * 2) / Math.max(dates.length - 1, 1);
-  const todayIndex = dates.findIndex(d => d === new Date().toISOString().split('T')[0]);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayIndex = dates.findIndex(d => d === todayStr);
 
-  // Генерируем точки с цветовой логикой
+  // Точки графика
   const points = percents.map((p, i) => {
     const x = padding + i * stepX;
     const y = height - padding - (p / maxY) * (height - padding * 2);
 
-    // Цвет точки по проценту выполнения
-    let color = '#F44336'; // красный <30%
-    if (p >= 70) color = '#4CAF50'; // зеленый ≥70%
-    else if (p >= 30) color = '#FFC107'; // желтый 30–69%
+    let color = '#F44336'; // <30%
+    if (p >= 70) color = '#4CAF50';
+    else if (p >= 30) color = '#FFC107';
 
-    if (i === todayIndex) color = '#2E86AB'; // сегодняшний день синий
+    if (i === todayIndex) color = '#2E86AB';
 
     return { x, y, p, color };
   });
 
-  // Полилиния для линии графика
   const linePoints = points.map(pt => `${pt.x},${pt.y}`).join(' ');
 
   // Средний процент
-  const avgPercent = Math.round(percents.reduce((a, b) => a + b, 0) / percents.length);
+  const avgPercent = Math.round(
+    percents.reduce((a, b) => a + b, 0) / percents.length
+  );
   const avgY = height - padding - (avgPercent / maxY) * (height - padding * 2);
 
   return `
 <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
   <style>
-    text { font-family: Arial, sans-serif; fill: #444; font-size: 12px; }
-    .percent-text { font-size: 12px; font-weight: bold; }
-    .y-label { font-size: 12px; text-anchor: end; }
-    .avg-line { stroke: #FF5722; stroke-width: 2; stroke-dasharray: 5,5; }
+    text {
+      font-family: "DejaVu Sans", "Noto Sans", sans-serif;
+      fill: #444;
+      font-size: 12px;
+    }
+    .percent-text { font-weight: bold; }
+    .y-label { text-anchor: end; }
+    .avg-line {
+      stroke: #FF5722;
+      stroke-width: 2;
+      stroke-dasharray: 6,6;
+    }
   </style>
 
-  <rect width="100%" height="100%" fill="#fff"/>
+  <rect width="100%" height="100%" fill="#ffffff"/>
 
-  <!-- оси -->
+  <!-- Оси -->
   <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#ddd"/>
   <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#ddd"/>
 
-  <!-- подписи по оси Y -->
-  <text x="${padding - 5}" y="${height - padding}" class="y-label" alignment-baseline="middle">0%</text>
-  <text x="${padding - 5}" y="${height - padding - (0.5 * (height - padding * 2))}" class="y-label" alignment-baseline="middle">50%</text>
-  <text x="${padding - 5}" y="${padding}" class="y-label" alignment-baseline="middle">100%</text>
+  <!-- Подписи оси Y -->
+  <text x="${padding - 6}" y="${height - padding}" class="y-label" dominant-baseline="middle">0%</text>
+  <text x="${padding - 6}" y="${height - padding - (height - padding * 2) / 2}" class="y-label" dominant-baseline="middle">50%</text>
+  <text x="${padding - 6}" y="${padding}" class="y-label" dominant-baseline="middle">100%</text>
 
-  <!-- заливка под графиком (легкая прозрачность) -->
-  <polygon points="${[...points.map(pt => `${pt.x},${pt.y}`), `${points[points.length - 1].x},${height - padding}`, `${points[0].x},${height - padding}`].join(' ')}" fill="#2E86AB" fill-opacity="0.1" />
+  <!-- Заливка -->
+  <polygon
+    points="${[
+      ...points.map(p => `${p.x},${p.y}`),
+      `${points[points.length - 1].x},${height - padding}`,
+      `${points[0].x},${height - padding}`
+    ].join(' ')}"
+    fill="#2E86AB"
+    fill-opacity="0.12"
+  />
 
-  <!-- линия графика -->
-  <polyline fill="none" stroke="#2E86AB" stroke-width="3" points="${linePoints}"/>
+  <!-- Линия -->
+  <polyline
+    points="${linePoints}"
+    fill="none"
+    stroke="#2E86AB"
+    stroke-width="3"
+  />
 
-  <!-- пунктирная линия среднего процента -->
-  <line x1="${padding}" y1="${avgY}" x2="${width - padding}" y2="${avgY}" class="avg-line" />
+  <!-- Средняя линия -->
+  <line
+    x1="${padding}"
+    y1="${avgY}"
+    x2="${width - padding}"
+    y2="${avgY}"
+    class="avg-line"
+  />
+  <text
+    x="${width - padding + 6}"
+    y="${avgY}"
+    dominant-baseline="middle"
+    fill="#FF5722"
+    font-size="11"
+  >
+    ${avgPercent}% среднее
+  </text>
 
-  <!-- точки с цветом и подписью -->
+  <!-- Точки -->
   ${points.map(pt => `
     <circle cx="${pt.x}" cy="${pt.y}" r="${pt.x === points[todayIndex]?.x ? 6 : 5}" fill="${pt.color}" />
     <text x="${pt.x}" y="${pt.y - 10}" text-anchor="middle" class="percent-text">${pt.p}%</text>
   `).join('')}
 
-  <!-- подписи дат -->
+  <!-- Даты -->
   ${dates.map((d, i) => `
     <text x="${padding + i * stepX}" y="${height - 10}" text-anchor="middle">
-      ${d.slice(5)}
-      ${i === todayIndex ? ' (Сегодня)' : ''}
+      ${d.slice(5)}${i === todayIndex ? ' (Сегодня)' : ''}
     </text>
   `).join('')}
 </svg>
@@ -686,7 +722,7 @@ function generateWeeklySVG({ dates, percents, completions = [], totalGoals = 1 }
 async function sendWeeklyReport() {
   try {
     const telegramUsers = await getAllUserIds();
-    const mapTelegramId = telegramUsers.map(t => t.telegramId);
+    const mapTelegramId = ['5102803347']
 
     console.log(`Найдено ${mapTelegramId.length} пользователей`);
 
