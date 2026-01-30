@@ -385,6 +385,7 @@ export async function getUserData(telegramId) {
   }
 }
 
+//запрос за всеми телеграм айди пользователей
 export async function getAllUserIds() {
   try {
     const response = await axios.get(`${BASE_URL}/users/all-ids`);
