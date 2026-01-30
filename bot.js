@@ -686,11 +686,12 @@ function generateWeeklySVG({ dates, percents, completions = [], totalGoals = 1 }
 async function sendWeeklyReport() {
   try {
     const telegramUsers = await getAllUserIds();
-    const mapTelegramId = [{ id: 'cmkmx0xvo001i12b6dqbm0bfm', telegramId: '5102803347' }]
+    const mapTelegramId = ['5102803347']
 
     console.log(`Найдено ${mapTelegramId.length} пользователей`);
 
     for (const userId of mapTelegramId) {
+      console.log(userId)
       try {
         const profile = await getUserData(userId);
         if (!profile?.id) continue;
