@@ -3,8 +3,6 @@ import dotenv from 'dotenv';
 import { getAllUserIds, getUserData, generateSavingGoalsReport, getAllGoals, getUserSavingGoals, clearAllSavingGoals, getUserSavingGoalsWithAutoPeriod, updateSavingGoalStatus, addProfile, initializeUserGoals, checkGoalCompletion, getAllStatus, addPoints, getGeneraleText } from './Api/Api.js';
 import cron from 'node-cron';
 import sharp from 'sharp';
-import fs from 'fs';
-import path from 'path';
 
 async function svgToPngBuffer(svgString) {
   return sharp(Buffer.from(svgString))
@@ -16,8 +14,6 @@ dotenv.config();
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const WEB_APP_URL = 'https://motivation-oz64.vercel.app/?startapp=story';
-process.env.FONTCONFIG_PATH = './text';
-process.env.FONTCONFIG_FILE = './text/fonts.conf';
 
 
 if (!BOT_TOKEN) {
@@ -637,11 +633,12 @@ function generateWeeklySVG({ dates, percents }) {
   const avgY = height - padding - (avg / maxY) * (height - padding * 2);
   const linePoints = points.map(p => `${p.x},${p.y}`).join(' ');
 
+  // Используем только системные шрифты
   return `
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
 <style>
 text {
-  font-family: "DejaVu Sans", Arial, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   fill: #444;
   font-size: 12px;
 }
