@@ -578,7 +578,6 @@ bot.command('support', async (ctx) => {
 
 bot.command('a', async (ctx) => {
   sendWeeklyReport()
-
   // sendDailyReminders('evening')
 });
 
@@ -682,6 +681,7 @@ ${d.slice(5)}${i === todayIndex ? ' (Сегодня)' : ''}
 `).join('')}
 </svg>`;
 }
+
 
 async function sendWeeklyReport() {
   try {
