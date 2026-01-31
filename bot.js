@@ -799,6 +799,8 @@ async function sendWeeklyReport() {
   }
 }
 
+//
+
 async function sendDailyReminders(timeOfDay) {
 
   const telegramUsers = await getAllUserIds();
