@@ -3,13 +3,16 @@ import dotenv from 'dotenv';
 import { getAllUserIds, getUserData, generateSavingGoalsReport, getAllGoals, getUserSavingGoals, clearAllSavingGoals, getUserSavingGoalsWithAutoPeriod, updateSavingGoalStatus, addProfile, initializeUserGoals, checkGoalCompletion, getAllStatus, addPoints, getGeneraleText } from './Api/Api.js';
 import cron from 'node-cron';
 import sharp from 'sharp';
+import path from 'path';
+
+const FONT_DIR = path.join(process.cwd(), 'fonts');
+process.env.FONTCONFIG_PATH = FONT_DIR;
+process.env.FONTCONFIG_FILE = path.join(FONT_DIR, 'fonts.conf');
 
 dotenv.config();
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const WEB_APP_URL = 'https://motivation-oz64.vercel.app/?startapp=story';
-process.env.FONTCONFIG_PATH = './Inter-4.1';
-process.env.FONTCONFIG_FILE = './Inter-4.1/fonts.conf';
 
 async function svgToPngBuffer(svgString) {
   return sharp(Buffer.from(svgString))
@@ -608,6 +611,10 @@ bot.telegram.getMe().then((botInfo) => {
   console.log('Ежедневные напоминания запланированы на 7:00 и 21:00 по Московскому времени');
 });
 
+console.log('FONTCONFIG_PATH:', process.env.FONTCONFIG_PATH);
+console.log('FONTCONFIG_FILE:', process.env.FONTCONFIG_FILE);
+
+
 function generateWeeklySVG({ dates, percents }) {
   const width = 700;
   const height = 280;
@@ -638,7 +645,7 @@ function generateWeeklySVG({ dates, percents }) {
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
 <style>
 text {
-  font-family: "Inter Variable", "Inter", Arial, sans-serif;
+  font-family: "DejaVu Sans", sans-serif;
   fill: #444;
   font-size: 12px;
 }
