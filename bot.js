@@ -16,6 +16,9 @@ dotenv.config();
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const WEB_APP_URL = 'https://motivation-oz64.vercel.app/?startapp=story';
+process.env.FONTCONFIG_PATH = './text';
+process.env.FONTCONFIG_FILE = './text/fonts.conf';
+
 
 if (!BOT_TOKEN) {
   throw new Error('BOT_TOKEN is required in .env');
@@ -613,18 +616,6 @@ function generateWeeklySVG({ dates, percents }) {
   const height = 280;
   const padding = 50;
 
-  // Читаем локальный шрифт
-  const fontPath = path.join(process.cwd(), 'text', 'DejaVuSans.ttf');
-  let fontBase64 = '';
-
-  try {
-    const fontBuffer = fs.readFileSync(fontPath);
-    fontBase64 = fontBuffer.toString('base64');
-  } catch (error) {
-    console.error('Ошибка чтения шрифта:', error);
-    // Используем стандартный шрифт если файл не найден
-  }
-
   const maxY = 100;
   const stepX = (width - padding * 2) / Math.max(dates.length - 1, 1);
   const today = new Date().toISOString().split('T')[0];
@@ -646,29 +637,14 @@ function generateWeeklySVG({ dates, percents }) {
   const avgY = height - padding - (avg / maxY) * (height - padding * 2);
   const linePoints = points.map(p => `${p.x},${p.y}`).join(' ');
 
-  // Используем локальный шрифт
-  const fontStyle = fontBase64 ? `
-@font-face {
-  font-family: "LocalFont";
-  src: url("data:font/truetype;base64,${fontBase64}") format("truetype");
-}
-text {
-  font-family: "LocalFont", Arial, sans-serif;
-  fill: #444;
-  font-size: 12px;
-}
-` : `
-text {
-  font-family: Arial, sans-serif;
-  fill: #444;
-  font-size: 12px;
-}
-`;
-
   return `
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
 <style>
-${fontStyle}
+text {
+  font-family: "DejaVu Sans", Arial, sans-serif;
+  fill: #444;
+  font-size: 12px;
+}
 
 .avg-line {
   stroke: #FF5722;
