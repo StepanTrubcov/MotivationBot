@@ -4,17 +4,18 @@ import { getAllUserIds, getUserData, generateSavingGoalsReport, getAllGoals, get
 import cron from 'node-cron';
 import sharp from 'sharp';
 
+dotenv.config();
+
+const BOT_TOKEN = process.env.BOT_TOKEN;
+const WEB_APP_URL = 'https://motivation-oz64.vercel.app/?startapp=story';
+process.env.FONTCONFIG_PATH = './Inter-4.1';
+process.env.FONTCONFIG_FILE = './Inter-4.1/fonts.conf';
+
 async function svgToPngBuffer(svgString) {
   return sharp(Buffer.from(svgString))
     .png({ quality: 90 })
     .toBuffer();
 }
-
-dotenv.config();
-
-const BOT_TOKEN = process.env.BOT_TOKEN;
-const WEB_APP_URL = 'https://motivation-oz64.vercel.app/?startapp=story';
-
 
 if (!BOT_TOKEN) {
   throw new Error('BOT_TOKEN is required in .env');
@@ -633,12 +634,11 @@ function generateWeeklySVG({ dates, percents }) {
   const avgY = height - padding - (avg / maxY) * (height - padding * 2);
   const linePoints = points.map(p => `${p.x},${p.y}`).join(' ');
 
-  // Используем только системные шрифты
   return `
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
 <style>
 text {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Inter Variable", "Inter", Arial, sans-serif;
   fill: #444;
   font-size: 12px;
 }
@@ -765,8 +765,8 @@ async function sendWeeklyReport() {
         else if (avg >= 40) summary = '💪 Неплохо. Есть хороший потенциал роста.';
         else summary = '⚠️ Было непросто. Главное — не останавливаться.';
 
-        const svg = generateWeeklySVG({ dates, percents });
 
+        const svg = generateWeeklySVG({ dates, percents });
         const pngBuffer = await svgToPngBuffer(svg);
 
         await bot.telegram.sendPhoto(
