@@ -386,8 +386,10 @@ bot.action('done_goals', async (ctx) => {
   }
 });
 
-function buildInProgressKeyboard(inProgress, selectedSet, messageType = null) {
+function buildInProgressKeyboard(inProgress, selectedSet, messageType = null, goals, userId) {
   const maxLen = Math.max(...inProgress.map(g => g.title.length));
+
+  console.log(goals, '392')
 
   const rows = inProgress.map(goal => {
     const isSelected = selectedSet.has(goal.id);
@@ -525,9 +527,7 @@ bot.action('Done_goals', async (ctx) => {
     await ctx.deleteMessage(loading.message_id);
 
     const resultText =
-      `🎉 Отличная работа!\n\n` +
-      `Цели были добавлены в раздел "✅ Выполненные цели".\n\n` +
-      `Продолжай в том же духе 💪🔥`;
+      `✅ Успешно!`;
 
     await ctx.editMessageText(resultText, { reply_markup: { inline_keyboard: [] } });
   } catch (e) {
@@ -580,6 +580,29 @@ bot.command('a', async (ctx) => {
   sendWeeklyReport()
   // sendDailyReminders('evening')
 });
+
+// bot.on('text', async (ctx) => {
+//   const info = ctx.message.entities;
+
+//   if (!info || info[0]?.type !== 'custom_emoji') return;
+
+//   await ctx.reply(info[0].custom_emoji_id)
+
+//   await ctx.reply(
+//     'Огонёк серии 🔥',
+//     {
+//       entities: [
+//         {
+//           offset: 13,
+//           length: 2,
+//           type: 'custom_emoji',
+//           custom_emoji_id: info[0].custom_emoji_id
+//         }
+//       ]
+//     }
+//   );
+// });
+
 
 bot.launch();
 console.log('Бот запущен ✅');
@@ -909,12 +932,16 @@ async function sendDailyReminders(timeOfDay) {
         }
 
         if (inProgress.length !== 0) {
-          const text = `🌇 Вечер — время подвести итоги.\n\nОтметьте выполненные цели, а затем нажмите — на 📊 Сгенерировать отчёт`;
-          const sent = await bot.telegram.sendMessage(userId.telegramId, text,
-            {
-              parse_mode: 'Markdown',
-              reply_markup: buildInProgressKeyboard(inProgress, new Set(), 'reminder').reply_markup
-            });
+          const text = `🌇 Вечер — время подвести итоги.\n\nОтметьте выполненные цели и нажмите — 📊 Сгенерировать отчёт`;
+          const sent = await bot.telegram.sendMessage(userId.telegramId, text, {
+            reply_markup: {
+              inline_keyboard: [
+                [Markup.button.callback('✅ Отметить цели', 'in_progress_goals')],
+                [Markup.button.callback('📊 Получить отчёт', 'generation')],
+              ]
+            }
+          });
+
           selectedByMessage.set(sent.message_id, { selected: new Set(), type: 'reminder' });
           goalsApi = goalsTime;
         }
