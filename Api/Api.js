@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'https://motivation-oz64.vercel.app/api';
+const BASE_URL = 'http://localhost:3000/api';
 
 //логинизация
 export const addProfile = async (ctx) => {
@@ -88,7 +88,6 @@ export async function getAllStatus(customUserId, goalId, newStatus, selectedOpti
     console.log(`Статус цели ${goalId} для пользователя ${customUserId} изменён на ${newStatus}`);
 
   } catch (error) {
-    toast.error("Извините произошла ошибка. Попробуйте снова.");
     console.error(`Ошибка обновления статуса цели ${goalId}:`, error);
     throw error;
   }
@@ -235,7 +234,7 @@ export async function addCompletedDate(customUserId, date) {
 }
 
 //генерация текста
-export const getGeneraleText = async (userTag, telegramId, goalsDone, goalsInProgress) => {
+export const getGeneraleText = async (series, userTag, telegramId, goalsDone, goalsInProgress) => {
   try {
     if (!telegramId) {
       console.error("❌ Нет telegramId для отчёта");
@@ -249,7 +248,8 @@ export const getGeneraleText = async (userTag, telegramId, goalsDone, goalsInPro
       goalsDone,
       goalsInProgress,
       userTag,
-      formattedDate
+      formattedDate,
+      series: series || 0,
     });
 
     const { message, success } = response.data;
@@ -257,7 +257,6 @@ export const getGeneraleText = async (userTag, telegramId, goalsDone, goalsInPro
     return message;
   } catch (err) {
     console.error("❌ Ошибка при генерации отчёта:", err);
-    toast.error("Произошла ошибка при создании отчёта");
   }
 };
 

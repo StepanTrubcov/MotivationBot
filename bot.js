@@ -12,7 +12,7 @@ process.env.FONTCONFIG_FILE = path.join(FONT_DIR, 'fonts.conf');
 dotenv.config();
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const WEB_APP_URL = 'https://motivation-oz64.vercel.app/?startapp=story';
+const WEB_APP_URL = 'https://motivation-oz64-id51dpo90-stepans-projects-e54d3120.vercel.app/?startapp=story';
 
 async function svgToPngBuffer(svgString) {
   return sharp(Buffer.from(svgString))
@@ -215,6 +215,8 @@ bot.action('generation', async (ctx) => {
     if (uid) {
       const goalsTime = await checkGoalCompletion(uid);
       const goals = await initializeUserGoals(uid);
+      const timeGoalsSaving = await getUserSavingGoals(ctx.from.id);
+
       goalsApi = goalsTime || goals;
 
       const goalsInProgress = goalsApi.filter(g => g.status === 'in_progress');
@@ -225,12 +227,70 @@ bot.action('generation', async (ctx) => {
         return ctx.reply('😴 Пока ничего нет — пора действовать. Возьми цели и начни движение.');
       }
 
+      let series = 0
+      let isTodayCompleted = false
 
-      const generateText = await getGeneraleText(userTag, userData.telegramId, goalsDone, goalsInProgress);
+      const today = new Date().toISOString().split("T")[0];
 
-      await ctx.deleteMessage(loading.message_id)
+      const pastDays = timeGoalsSaving.savingGoals.filter(
+        (item) => item.date < today
+      );
 
-      await ctx.reply(generateText);
+      const todayDay = timeGoalsSaving.savingGoals.filter(
+        (item) => item.date === today
+      );
+
+      pastDays.map(s => {
+
+        const r = s.goalData.filter(g => g.status === "completed")
+
+        if (r.length >= 1) { series++ } else if (r.length === 0) { series = 0 }
+      })
+
+      todayDay.map(s => {
+
+        const r = s.goalData.filter(g => g.status === "completed")
+
+        if (r.length > 0) {
+          series++
+          isTodayCompleted = true
+        }
+
+        if (r.length === 0) {
+          isTodayCompleted = false
+        }
+      })
+
+      const levelsOfLights = [
+        { url: "5192859097178873603", daysMin: 2, daysMax: 4 },
+        { url: "5224536851808815753", daysMin: 5, daysMax: 8 },
+        { url: "5226521156764340272", daysMin: 9, daysMax: 12 },
+        { url: "5224528579701806800", daysMin: 13, daysMax: 16 },
+        { url: "5224530920458980477", daysMin: 17, daysMax: 22 },
+        { url: "5224196071923683270", daysMin: 23, daysMax: 30 },
+        { url: "5224673749596411018", daysMin: 31, daysMax: 45 },
+        { url: "5224203158619722114", daysMin: 46, daysMax: 60 },
+        { url: "5224343728604352036", daysMin: 61, daysMax: 89 },
+        { url: "5224479788873323449", daysMin: 90, daysMax: 120 },
+      ];
+      const grayLightUrl = '5224728012213228232';
+
+      const currentLight = levelsOfLights.find(
+        (level) => series >= level.daysMin && series <= level.daysMax
+      ) || levelsOfLights[levelsOfLights.length - 1];
+      const lightUrl = isTodayCompleted ? currentLight.url : grayLightUrl;
+
+      const generateText = await getGeneraleText(series, userTag, userData.telegramId, goalsDone, goalsInProgress);
+
+      await ctx.deleteMessage(loading.message_id);
+
+      const emojiPlaceholder = '🔥';
+      const fireIndex = generateText.indexOf(emojiPlaceholder);
+      const entities = fireIndex !== -1
+        ? [{ offset: fireIndex, length: emojiPlaceholder.length, type: 'custom_emoji', custom_emoji_id: lightUrl }]
+        : undefined;
+
+      await ctx.reply(generateText, entities ? { entities } : {});
     }
   } catch (err) {
     console.error('Ошибка генерации:', err);
@@ -502,7 +562,6 @@ bot.action('Done_goals', async (ctx) => {
   const until = new Date().toISOString().split('T')[0];
 
   try {
-    // Выполняем операции последовательно
     for (const g of chosen) {
       try {
         const profile = await addProfile(ctx);
@@ -524,12 +583,95 @@ bot.action('Done_goals', async (ctx) => {
       }
     }
 
+    const timeGoalsSaving = await getUserSavingGoals(ctx.from.id)
+
+    const levelsOfLights = [
+      { url: "5192859097178873603", daysMin: 2, daysMax: 4 },
+      { url: "5224536851808815753", daysMin: 5, daysMax: 8 },
+      { url: "5226521156764340272", daysMin: 9, daysMax: 12 },
+      { url: "5224528579701806800", daysMin: 13, daysMax: 16 },
+      { url: "5224530920458980477", daysMin: 17, daysMax: 22 },
+      { url: "5224196071923683270", daysMin: 23, daysMax: 30 },
+      { url: "5224673749596411018", daysMin: 31, daysMax: 45 },
+      { url: "5224203158619722114", daysMin: 46, daysMax: 60 },
+      { url: "5224343728604352036", daysMin: 61, daysMax: 89 },
+      { url: "5224479788873323449", daysMin: 90, daysMax: 120 },
+    ];
+
+    const grayLightUrl = '5224728012213228232'
+
+    let num = 0
+    let isTodayCompleted = false
+
+    const today = new Date().toISOString().split("T")[0];
+
+    const pastDays = timeGoalsSaving.savingGoals.filter(
+      (item) => item.date < today
+    );
+
+    const todayDay = timeGoalsSaving.savingGoals.filter(
+      (item) => item.date === today
+    );
+
+
+    pastDays.map(s => {
+
+      const r = s.goalData.filter(g => g.status === "completed")
+
+      if (r.length >= 1) { num++ } else if (r.length === 0) { num = 0 }
+    })
+
+    todayDay.map(s => {
+
+      const r = s.goalData.filter(g => g.status === "completed")
+
+      if (r.length > 0) {
+        num++
+        isTodayCompleted = true
+      }
+
+      if (r.length === 0) {
+        isTodayCompleted = false
+      }
+    })
+
+    const currentLight =
+      levelsOfLights.find(
+        (level) => num >= level.daysMin && num <= level.daysMax
+      ) || levelsOfLights[levelsOfLights.length - 1];
+
+    const finalUrl = isTodayCompleted
+      ? currentLight.url
+      : grayLightUrl;
+
     await ctx.deleteMessage(loading.message_id);
+    let resultText = `✅ Успешно выполнено!`;
+    let entities = undefined;
 
-    const resultText =
-      `✅ Успешно!`;
+    if (num >= 2) {
 
-    await ctx.editMessageText(resultText, { reply_markup: { inline_keyboard: [] } });
+      const emojiPlaceholder = '🔥';
+
+      if (num === 2) {
+        resultText = `Серия начата: ${emojiPlaceholder} ${num} дн.\n\n✅ Успешно выполнено!`;
+      } else {
+        resultText = `${emojiPlaceholder} Серия: ${num} дн.\n\n✅ Успешно выполнено!`;
+      }
+
+      // находим позицию 🔥
+      const fireIndex = resultText.indexOf(emojiPlaceholder);
+
+      entities = [
+        {
+          offset: fireIndex,
+          length: emojiPlaceholder.length,
+          type: 'custom_emoji',
+          custom_emoji_id: finalUrl
+        }
+      ];
+    }
+
+    await ctx.editMessageText(resultText, { entities: entities, reply_markup: { inline_keyboard: [] } });
   } catch (e) {
     console.error('Done_goals error:', e.message);
     await ctx.reply('❌ Ошибка при обновлении целей, попробуй ещё раз.');
@@ -577,32 +719,9 @@ bot.command('support', async (ctx) => {
 });
 
 bot.command('a', async (ctx) => {
-  sendWeeklyReport()
-  // sendDailyReminders('evening')
+  // sendWeeklyReport()
+  sendDailyReminders('evening')
 });
-
-// bot.on('text', async (ctx) => {
-//   const info = ctx.message.entities;
-
-//   if (!info || info[0]?.type !== 'custom_emoji') return;
-
-//   await ctx.reply(info[0].custom_emoji_id)
-
-//   await ctx.reply(
-//     'Огонёк серии 🔥',
-//     {
-//       entities: [
-//         {
-//           offset: 13,
-//           length: 2,
-//           type: 'custom_emoji',
-//           custom_emoji_id: info[0].custom_emoji_id
-//         }
-//       ]
-//     }
-//   );
-// });
-
 
 bot.launch();
 console.log('Бот запущен ✅');
@@ -704,7 +823,6 @@ ${d.slice(5)}${i === todayIndex ? ' (Сегодня)' : ''}
 `).join('')}
 </svg>`;
 }
-
 
 async function sendWeeklyReport() {
   try {
@@ -828,10 +946,72 @@ async function sendDailyReminders(timeOfDay) {
 
   for (const userId of telegramUsers) {
     try {
+
+      const levelsOfLights = [
+        { url: "5192859097178873603", daysMin: 2, daysMax: 4 },
+        { url: "5224536851808815753", daysMin: 5, daysMax: 8 },
+        { url: "5226521156764340272", daysMin: 9, daysMax: 12 },
+        { url: "5224528579701806800", daysMin: 13, daysMax: 16 },
+        { url: "5224530920458980477", daysMin: 17, daysMax: 22 },
+        { url: "5224196071923683270", daysMin: 23, daysMax: 30 },
+        { url: "5224673749596411018", daysMin: 31, daysMax: 45 },
+        { url: "5224203158619722114", daysMin: 46, daysMax: 60 },
+        { url: "5224343728604352036", daysMin: 61, daysMax: 89 },
+        { url: "5224479788873323449", daysMin: 90, daysMax: 120 },
+      ];
+
+      const grayLightUrl = '5224728012213228232'
+
       const goalsTime = await checkGoalCompletion(userId.id);
+
+      const timeGoalsSaving = await getUserSavingGoals(userId.telegramId)
 
       const inProgress = goalsTime.filter(g => g.status === 'in_progress');
       const inDone = goalsTime.filter(g => g.status === 'completed');
+
+      let num = 0
+      let isTodayCompleted = false
+
+      const today = new Date().toISOString().split("T")[0];
+
+      const pastDays = timeGoalsSaving.savingGoals.filter(
+        (item) => item.date < today
+      );
+
+      const todayDay = timeGoalsSaving.savingGoals.filter(
+        (item) => item.date === today
+      );
+
+
+      pastDays.map(s => {
+
+        const r = s.goalData.filter(g => g.status === "completed")
+
+        if (r.length >= 1) { num++ } else if (r.length === 0) { num = 0 }
+      })
+
+      todayDay.map(s => {
+
+        const r = s.goalData.filter(g => g.status === "completed")
+
+        if (r.length > 0) {
+          num++
+          isTodayCompleted = true
+        }
+
+        if (r.length === 0) {
+          isTodayCompleted = false
+        }
+      })
+
+      const currentLight =
+        levelsOfLights.find(
+          (level) => num >= level.daysMin && num <= level.daysMax
+        ) || levelsOfLights[levelsOfLights.length - 1];
+
+      const finalUrl = isTodayCompleted
+        ? currentLight.url
+        : grayLightUrl;
 
       if (timeOfDay === 'morning') {
         const yesterday = new Date();
@@ -843,6 +1023,7 @@ async function sendDailyReminders(timeOfDay) {
 
         const TheLastNumber = savingGoals.savingGoals?.length - 1;
         const TheLastDay = savingGoals?.savingGoals[TheLastNumber]?.date;
+
 
         if (TheLastDay && day === TheLastDay) {
           await clearAllSavingGoals(userId.telegramId);
@@ -894,9 +1075,30 @@ async function sendDailyReminders(timeOfDay) {
             `🌤 Утро — время задать тон дню.\n\nОткрой приложение и посмотри цели на сегодня.`
           ];
 
-          const randomMessage = morningWithGoals[Math.floor(Math.random() * morningWithGoals.length)];
+          const randomMessage =
+            morningWithGoals[Math.floor(Math.random() * morningWithGoals.length)];
 
-          await bot.telegram.sendMessage(userId.telegramId, randomMessage, {
+          let finalText = randomMessage;
+          let entities = undefined;
+
+          if (num > 0) {
+
+            const emojiPlaceholder = '🔥';
+
+            finalText = `${emojiPlaceholder} Серия: ${num} дн.\n\n${randomMessage}`;
+
+            entities = [
+              {
+                offset: 0,
+                length: emojiPlaceholder.length,
+                type: 'custom_emoji',
+                custom_emoji_id: finalUrl
+              }
+            ];
+          }
+
+          await bot.telegram.sendMessage(userId.telegramId, finalText, {
+            entities: entities,
             reply_markup: {
               inline_keyboard: [
                 [Markup.button.url('🚀 Открыть приложение', `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
@@ -905,6 +1107,7 @@ async function sendDailyReminders(timeOfDay) {
             }
           });
         }
+
       }
 
       if (timeOfDay === 'evening') {
@@ -921,8 +1124,30 @@ async function sendDailyReminders(timeOfDay) {
         }
 
         if (inProgress.length === 0 && inDone.length !== 0) {
-          const text = `🌙 День закрыт идеально.\n\nВсе цели выполнены — зафиксируйте результат и посмотрите отчёт за сегодня.`;
-          await bot.telegram.sendMessage(userId.telegramId, text, {
+
+          const baseText = `🌙 День закрыт идеально.\n\nВсе цели выполнены — зафиксируйте результат и посмотрите отчёт за сегодня.`;
+
+          let finalText = baseText;
+          let entities = undefined;
+
+          if (num > 0) {
+
+            const emojiPlaceholder = '🔥';
+
+            finalText = `${emojiPlaceholder} Серия: ${num} дн.\n\n${baseText}`;
+
+            entities = [
+              {
+                offset: 0,
+                length: emojiPlaceholder.length,
+                type: 'custom_emoji',
+                custom_emoji_id: finalUrl
+              }
+            ];
+          }
+
+          await bot.telegram.sendMessage(userId.telegramId, finalText, {
+            entities: entities,
             reply_markup: {
               inline_keyboard: [
                 [Markup.button.callback('📊 Получить отчёт', 'generation')],
@@ -932,8 +1157,32 @@ async function sendDailyReminders(timeOfDay) {
         }
 
         if (inProgress.length !== 0) {
-          const text = `🌇 Вечер — время подвести итоги.\n\nОтметьте выполненные цели и нажмите — 📊 Сгенерировать отчёт`;
-          const sent = await bot.telegram.sendMessage(userId.telegramId, text, {
+
+          const randomMessage = `🌇 Вечер — время подвести итоги.\n\nОтметьте выполненные цели и нажмите — 📊 Сгенерировать отчёт`;
+
+          let finalText = null
+          let entities = undefined;
+
+          if (num > 0) {
+
+            const emojiPlaceholder = '🔥';
+
+            finalText = isTodayCompleted
+              ? `${emojiPlaceholder} Серия: ${num} дн.\n\n${randomMessage}`
+              : `${emojiPlaceholder} Серия: ${num} дн.\n\nУ вас последний шанс сохранить серию!\n\n${randomMessage}`;
+
+            entities = [
+              {
+                offset: 0,
+                length: emojiPlaceholder.length,
+                type: 'custom_emoji',
+                custom_emoji_id: finalUrl
+              }
+            ];
+          } else { finalText = randomMessage; }
+
+          const sent = await bot.telegram.sendMessage(userId.telegramId, finalText, {
+            entities: entities,
             reply_markup: {
               inline_keyboard: [
                 [Markup.button.callback('✅ Отметить цели', 'in_progress_goals')],
