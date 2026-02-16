@@ -144,16 +144,6 @@ bot.command('mini_aps', async (ctx) => {
   );
 });
 
-bot.telegram.setChatMenuButton({
-  menu_button: {
-    type: 'web_app',
-    text: 'Open',
-    web_app: {
-      url: WEB_APP_URL
-    }
-  }
-});
-
 bot.command('generate', async (ctx) => {
   await ctx.replyWithMarkdown(
     `📊 *Генератор отчёта за день*\n\n` +

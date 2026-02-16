@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:3000/api';
+const BASE_URL = 'https://motivation-oz64.vercel.app/api';
 
 //логинизация
 export const addProfile = async (ctx) => {
