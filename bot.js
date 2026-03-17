@@ -150,7 +150,7 @@ bot.command('mini_aps', async (ctx) => {
   await ctx.replyWithMarkdown(
     `⚔️ Мини-приложение *Дневные достижения*\n\n`,
     Markup.inlineKeyboard([
-      [Markup.button.webApp('🚀 Открыть приложение', `https://motivation-oz64-mjsetxg5f-stepans-projects-e54d3120.vercel.app/`)],
+      [Markup.button.url('🚀 Открыть приложение', `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
       [Markup.button.callback('❌ Закрыть', 'close_message')],
     ])
   );
