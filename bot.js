@@ -12,12 +12,45 @@ process.env.FONTCONFIG_FILE = path.join(FONT_DIR, 'fonts.conf');
 dotenv.config();
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const WEB_APP_URL = 'https://motivation-oz64-id51dpo90-stepans-projects-e54d3120.vercel.app/?startapp=story';
+const WEB_APP_URL = '';
 
 async function svgToPngBuffer(svgString) {
   return sharp(Buffer.from(svgString))
     .png({ quality: 90 })
     .toBuffer();
+}
+
+function computeSeries(timeGoalsSaving) {
+  if (!timeGoalsSaving || !Array.isArray(timeGoalsSaving)) return 0;
+
+  const today = new Date().toISOString().split("T")[0];
+  const pastDays = timeGoalsSaving
+    .filter((item) => item.date < today)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  let num = 0;
+  pastDays.forEach((s) => {
+    const r = (s.goalData || []).filter((g) => g.status === "completed");
+    if (r.length >= 1) num += 1;
+    else num = 0;
+  });
+
+  const todayDay = timeGoalsSaving.find((item) => item.date === today);
+  if (todayDay && todayDay.goalData) {
+    const r = todayDay.goalData.filter((g) => g.status === "completed");
+    if (r.length > 0) num += 1;
+  }
+
+  return num;
+}
+
+function getIsTodayCompleted(timeGoalsSaving) {
+  if (!timeGoalsSaving || !Array.isArray(timeGoalsSaving)) return false;
+
+  const today = new Date().toISOString().split("T")[0];
+  const todayDay = timeGoalsSaving.find((item) => item.date === today);
+  if (!todayDay || !todayDay.goalData) return false;
+  return todayDay.goalData.some((g) => g.status === "completed");
 }
 
 if (!BOT_TOKEN) {
@@ -49,7 +82,6 @@ bot.start(async (ctx) => {
   if (userData) {
     await ctx.deleteMessage(loading.message_id);
     await ctx.replyWithMarkdown(
-      `❄️ *Winter Arc* — твой путь дисциплины этой зимой\n\n` +
       `👋 Привет, ${ctx.from.first_name}!\n\n` +
 
       `Этот бот поможет тебе:\n` +
@@ -69,10 +101,10 @@ bot.start(async (ctx) => {
       `📢 Наш канал: *@Motivation_bot_channel*\n` +
       `❓ Вопросы и помощь: *@keep_alive_Assistant_bot*\n\n` +
 
-      `🚀 *Начни прямо сейчас*`,
+      `🚀 *Начни прямо сейчас - пройди обучение*`,
       {
         reply_markup: Markup.inlineKeyboard([
-          [Markup.button.url('🚀 Открыть приложение', `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
+          [Markup.button.url('🚀 Пройти обучение', `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
         ]).reply_markup
       }
     );
@@ -114,48 +146,11 @@ bot.command('goals', async (ctx) => {
   }
 });
 
-bot.command('winter_arc', async (ctx) => {
-  await ctx.replyWithMarkdown(
-    `❄️ *Winter Arc — сезон дисциплины*\n\n` +
-    `Winter Arc — это период, когда ты осознанно работаешь над собой.\n\n` +
-    `Пока другие сбавляют темп, ты:\n` +
-    `• укрепляешь дисциплину\n` +
-    `• формируешь полезные привычки\n` +
-    `• учишься доводить дела до конца\n\n` +
-    `🔥 Это не марафон и не челлендж.\n` +
-    `Это твой личный режим роста.\n\n` +
-    `Каждый день ты отмечаешь выполненные действия\n` +
-    `И шаг за шагом выходишь на новый уровень.\n\n` +
-    `⚔️ *Winter Arc начинается с простых действий.*\n` +
-    `Главное — не пропускать.`,
-    Markup.inlineKeyboard([
-      [Markup.button.callback('❌ Закрыть', 'close_message')],
-    ])
-  )
-});
-
 bot.command('mini_aps', async (ctx) => {
   await ctx.replyWithMarkdown(
     `⚔️ Мини-приложение *Дневные достижения*\n\n`,
     Markup.inlineKeyboard([
-      [Markup.button.url('🚀 Открыть приложение', `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
-      [Markup.button.callback('❌ Закрыть', 'close_message')],
-    ])
-  );
-});
-
-bot.command('generate', async (ctx) => {
-  await ctx.replyWithMarkdown(
-    `📊 *Генератор отчёта за день*\n\n` +
-    `Здесь ты можешь собрать отчёт по своим целям за сегодня.\n\n` +
-    `Отчёт показывает:\n` +
-    `• какие цели ты выполнил\n` +
-    `• над чем ещё работаешь\n` +
-    `• твой прогресс за день\n\n` +
-    `Его можно сохранить или поделиться им в канале, чате или Stories.\n\n` +
-    `Выбери действие:`,
-    Markup.inlineKeyboard([
-      [Markup.button.callback('🔥 Сгенерировать отчёт', 'generation')],
+      [Markup.button.webApp('🚀 Открыть приложение', `https://motivation-oz64-mjsetxg5f-stepans-projects-e54d3120.vercel.app/`)],
       [Markup.button.callback('❌ Закрыть', 'close_message')],
     ])
   );
@@ -195,7 +190,7 @@ bot.command('info', async (ctx) => {
   );
 });
 
-bot.action('generation', async (ctx) => {
+bot.command('generate', async (ctx) => {
   const loading = await ctx.reply('⏳ Генерируем твой отчёт...');
   try {
     const profile = await addProfile(ctx);
@@ -217,39 +212,8 @@ bot.action('generation', async (ctx) => {
         return ctx.reply('😴 Пока ничего нет — пора действовать. Возьми цели и начни движение.');
       }
 
-      let series = 0
-      let isTodayCompleted = false
-
-      const today = new Date().toISOString().split("T")[0];
-
-      const pastDays = timeGoalsSaving.savingGoals.filter(
-        (item) => item.date < today
-      );
-
-      const todayDay = timeGoalsSaving.savingGoals.filter(
-        (item) => item.date === today
-      );
-
-      pastDays.map(s => {
-
-        const r = s.goalData.filter(g => g.status === "completed")
-
-        if (r.length >= 1) { series++ } else if (r.length === 0) { series = 0 }
-      })
-
-      todayDay.map(s => {
-
-        const r = s.goalData.filter(g => g.status === "completed")
-
-        if (r.length > 0) {
-          series++
-          isTodayCompleted = true
-        }
-
-        if (r.length === 0) {
-          isTodayCompleted = false
-        }
-      })
+      const series = computeSeries(timeGoalsSaving?.savingGoals);
+      const isTodayCompleted = getIsTodayCompleted(timeGoalsSaving?.savingGoals);
 
       const levelsOfLights = [
         { url: "5192859097178873603", daysMin: 2, daysMax: 4 },
@@ -590,40 +554,8 @@ bot.action('Done_goals', async (ctx) => {
 
     const grayLightUrl = '5224728012213228232'
 
-    let num = 0
-    let isTodayCompleted = false
-
-    const today = new Date().toISOString().split("T")[0];
-
-    const pastDays = timeGoalsSaving.savingGoals.filter(
-      (item) => item.date < today
-    );
-
-    const todayDay = timeGoalsSaving.savingGoals.filter(
-      (item) => item.date === today
-    );
-
-
-    pastDays.map(s => {
-
-      const r = s.goalData.filter(g => g.status === "completed")
-
-      if (r.length >= 1) { num++ } else if (r.length === 0) { num = 0 }
-    })
-
-    todayDay.map(s => {
-
-      const r = s.goalData.filter(g => g.status === "completed")
-
-      if (r.length > 0) {
-        num++
-        isTodayCompleted = true
-      }
-
-      if (r.length === 0) {
-        isTodayCompleted = false
-      }
-    })
+    const num = computeSeries(timeGoalsSaving?.savingGoals);
+    const isTodayCompleted = getIsTodayCompleted(timeGoalsSaving?.savingGoals);
 
     const currentLight =
       levelsOfLights.find(
@@ -734,9 +666,11 @@ bot.telegram.getMe().then((botInfo) => {
   });
 
 
-  // каждое воскресенье в 10 утра
-  cron.schedule('0 7 * * 0', () => {
+  // каждое воскресенье в 20:00
+  cron.schedule('0 20 * * 0', () => {
     sendWeeklyReport();
+  }, {
+    timezone: 'Europe/Moscow'
   });
 
   console.log('Ежедневные напоминания запланированы на 7:00 и 21:00 по Московскому времени');
@@ -959,40 +893,8 @@ async function sendDailyReminders(timeOfDay) {
       const inProgress = goalsTime.filter(g => g.status === 'in_progress');
       const inDone = goalsTime.filter(g => g.status === 'completed');
 
-      let num = 0
-      let isTodayCompleted = false
-
-      const today = new Date().toISOString().split("T")[0];
-
-      const pastDays = timeGoalsSaving.savingGoals.filter(
-        (item) => item.date < today
-      );
-
-      const todayDay = timeGoalsSaving.savingGoals.filter(
-        (item) => item.date === today
-      );
-
-
-      pastDays.map(s => {
-
-        const r = s.goalData.filter(g => g.status === "completed")
-
-        if (r.length >= 1) { num++ } else if (r.length === 0) { num = 0 }
-      })
-
-      todayDay.map(s => {
-
-        const r = s.goalData.filter(g => g.status === "completed")
-
-        if (r.length > 0) {
-          num++
-          isTodayCompleted = true
-        }
-
-        if (r.length === 0) {
-          isTodayCompleted = false
-        }
-      })
+      const num = computeSeries(timeGoalsSaving?.savingGoals);
+      const isTodayCompleted = getIsTodayCompleted(timeGoalsSaving?.savingGoals);
 
       const currentLight =
         levelsOfLights.find(
@@ -1148,8 +1050,27 @@ async function sendDailyReminders(timeOfDay) {
 
         if (inProgress.length !== 0) {
 
-          const randomMessage = `🌇 Вечер — время подвести итоги.\n\nОтметьте выполненные цели и нажмите — 📊 Сгенерировать отчёт`;
+          const messages = [
+            `🌇 День почти завершён.\n\nОтметьте сделанное и жмите — 📊 Сгенерировать отчёт`,
+          
+            `🌆 Вечер наступил — время подвести итоги.\n\nЖмите — 📊 Получить отчёт`,
+          
+            `🌙 Завершаем день красиво.\n\nОтметьте прогресс и жмите — 📊 Сформировать отчёт`,
+          
+            `🌃 Подводим итоги дня.\n\nЗафиксируйте результат и жмите — 📊 Отчёт`,
+          
+            `🌌 День был продуктивным?\n\nПора это отметить — 📊 Сгенерировать отчёт`,
+          
+            `🌙 Финальный шаг на сегодня.\n\nОтметьте выполненное и жмите — 📊 Получить отчёт`,
+          
+            `🌆 Закройте день с результатом.\n\nЖмите — 📊 Сформировать отчёт`
+          ];
 
+          const randomMessage = messages.length
+            ? messages[Math.floor(Math.random() * messages.length)]
+            : '';
+          
+          
           let finalText = null
           let entities = undefined;
 
@@ -1218,6 +1139,8 @@ const bot_ = new Telegraf(BOT_TOKEN_);
 bot_.command('start', async (ctx) => {
   await ctx.replyWithMarkdown(
     `❓ *Часто задаваемые вопросы* ❓\n\n` +
+    `НЕ ЗАБУДЬТЕ ПРОЙТИ ОБУЧЕНИЕ В ПРИЛОЖЕНИИ!\n\n` +
+
     `Если у вас возникли какие-то вопросы по нашему приложению или боту, вы можете найти ответы здесь.\n\n` +
 
     `*Частые вопросы:*\n` +
@@ -1227,6 +1150,7 @@ bot_.command('start', async (ctx) => {
     `/deleteGoals - Как удалить у себя цель?\n` +
     `/personalGoals - Как добавить свою личную цель?\n` +
     `/yesterday - Что делать если забыл отметить вчера цели?\n` +
+    `/series - Как начать серию (огонёк)?\n` +
     `/report - Откуда взять дневной/недельный/месяцный отчёт?\n` +
     `/achievements - Как получить ачивку?\n` +
     `/history - Как поделиться ачивкой?\n` +
@@ -1238,39 +1162,25 @@ bot_.command('start', async (ctx) => {
   );
 });
 
-
 bot_.command('why', async (ctx) => {
   try {
 
     await ctx.replyWithMarkdown(
       `*🚀 Зачем нужен бот «Дневные достижения»?*
 
-Дисциплина — это главная мышца успеха.  
-Именно она отличает тех, кто *хочет*, от тех, кто *делает*.
+Это простой помощник, чтобы *держать дисциплину* и видеть прогресс по целям.
 
-*«Дневные достижения»* — это не просто трекер задач.  
-Это инструмент, который помогает вам:
-• формировать полезные привычки  
-• доводить цели до конца  
-• видеть реальный прогресс, а не иллюзию занятости  
+*Как это работает:*
+1) Вы выбираете цели в приложении *(на 30 / 60 / 120 дней)*
+2) Каждый день отмечаете выполнение
+3) Бот помогает не забывать и показывает результат
 
----
+*Что вы получаете:*
+• 🔥 серию дней (streak), когда вы делаете хотя бы 1 цель в день  
+• 🏆 очки и достижения за регулярность  
+• 📊 отчёты по дню / неделе / месяцу  
 
-✨ *Основные возможности бота:*
-• 🎯 Ставьте цели на *30 / 60 / 120 дней*
-• ✅ Отмечайте ежедневное выполнение
-• 🏆 Получайте очки и уникальные достижения
-• 📊 Анализируйте прогресс через отчёты
-• ❄️ Участвуйте в *Winter Arc* — зимней программе развития
-
----
-
-💡 *Главная цель «Дневных достижений»*  
-Помочь вам **прокачать дисциплину** — ту самую внутреннюю силу,  
-которая делает результат неизбежным.
-
-Маленькие шаги каждый день → большие изменения в жизни 🌱  
-Начните сегодня — и поблагодарите себя завтра.
+Главная идея простая: *маленький шаг каждый день = большой результат со временем*.
 `,
       {
         reply_markup: Markup.inlineKeyboard([
@@ -1284,14 +1194,29 @@ bot_.command('why', async (ctx) => {
   }
 });
 
+bot_.command('series', async (ctx) => {
+  try {
+    await ctx.replyWithMarkdown(
+      `*🔥 Серия (огонёк) — как начать и не потерять*
+\nСерия начинается, когда вы выполняете *2 дня подряд* хотя бы *1 цель*.
+\nДальше серия растёт каждый день, если в этом дне есть хотя бы *1 выполненная цель*.
+\nЕсли пропустить день (нет ни одной выполненной цели) — серия сбрасывается.`,
+      {
+        reply_markup: Markup.inlineKeyboard([
+          [Markup.button.callback('❌ Закрыть', 'message_close')],
+        ]).reply_markup
+      }
+    );
+  } catch (error) {
+    console.error('Error sending series text:', error);
+    await ctx.reply('❌ Произошла ошибка при отправке сообщения. Попробуйте позже.');
+  }
+});
 
 bot_.command('newGoals', async (ctx) => {
   try {
-    await ctx.replyWithVideo(
-      'https://h.uguu.se/zvRunwAf.mp4',
-      {
-        caption:
-          `*🎯 Как взять цель в приложении?*
+    await ctx.replyWithMarkdown(
+      `*🎯 Как взять цель в приложении?*
 
 Следуйте этим простым шагам 👇
 
@@ -1306,7 +1231,7 @@ bot_.command('newGoals', async (ctx) => {
 Цель появится в разделе *«В процессе»*, и вы сможете отмечать выполнение каждый день.
 
 Маленькие действия сегодня → большие результаты завтра 🚀`,
-        parse_mode: 'Markdown',
+      {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback('❌ Закрыть', 'message_close')],
         ]).reply_markup
@@ -1314,19 +1239,15 @@ bot_.command('newGoals', async (ctx) => {
     );
 
   } catch (error) {
-    console.error('Error sending newGoals video:', error);
-    await ctx.reply('❌ Произошла ошибка при загрузке видео. Попробуйте позже.');
+    console.error('Error sending newGoals text:', error);
+    await ctx.reply('❌ Произошла ошибка при отправке сообщения. Попробуйте позже.');
   }
 });
 
-
 bot_.command('accomplishment', async (ctx) => {
   try {
-    await ctx.replyWithVideo(
-      'https://files.catbox.moe/502ahm.mp4',
-      {
-        caption:
-          `*✅ Как выполнить или отменить выполнение цели?*
+    await ctx.replyWithMarkdown(
+      `*✅ Как выполнить или отменить выполнение цели?*
 
 Есть *два способа* выполнить цель 👇
 
@@ -1343,7 +1264,7 @@ bot_.command('accomplishment', async (ctx) => {
 4️⃣ Нажмите кнопку **«Выполнить»**
 
 💡 Этот способ удобен, если у вас много активных целей.`,
-        parse_mode: 'Markdown',
+      {
         reply_markup: Markup.inlineKeyboard([
           [Markup.button.callback('❌ Закрыть', 'message_close')],
         ]).reply_markup
@@ -1358,11 +1279,8 @@ bot_.command('accomplishment', async (ctx) => {
 
 
 bot_.command('deleteGoals', async (ctx) => {
-  await ctx.replyWithVideo(
-    'https://files.catbox.moe/tfmzzo.mp4',
-    {
-      caption:
-        `*🗑 Как удалить цель?*
+  await ctx.replyWithMarkdown(
+    `*🗑 Как удалить цель?*
 
 Если цель больше не актуальна, вы можете удалить её в любой момент 👇
 
@@ -1373,7 +1291,7 @@ bot_.command('deleteGoals', async (ctx) => {
 4️⃣ Нажмите на неё — цель будет удалена
 
 ⚠️ *Обратите внимание:* после удаления цели её снова можно будет найти в разделе *Доступные* и взять её а прогресс на ей сохранится.`,
-      parse_mode: 'Markdown',
+    {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('❌ Закрыть', 'message_close')],
       ]).reply_markup
@@ -1384,11 +1302,8 @@ bot_.command('deleteGoals', async (ctx) => {
 
 
 bot_.command('personalGoals', async (ctx) => {
-  await ctx.replyWithVideo(
-    'https://files.catbox.moe/jyuuwr.mp4',
-    {
-      caption:
-        `*➕ Как добавить свою личную цель?*
+  await ctx.replyWithMarkdown(
+    `*➕ Как добавить свою личную цель?*
 
 Вы можете создать собственную цель, которая будет только у вас 👇
 
@@ -1406,7 +1321,7 @@ bot_.command('personalGoals', async (ctx) => {
 
 📍 *Что дальше?*  
 Теперь возьмите её как обычную цель — через список целей или команду **/newGoals**.`,
-      parse_mode: 'Markdown',
+    {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('❌ Закрыть', 'message_close')],
       ]).reply_markup
@@ -1417,11 +1332,8 @@ bot_.command('personalGoals', async (ctx) => {
 
 
 bot_.command('yesterday', async (ctx) => {
-  await ctx.replyWithVideo(
-    'https://files.catbox.moe/i2qea0.mp4',
-    {
-      caption:
-        `*⏪ Что делать, если вы забыли отметить цели вчера?*
+  await ctx.replyWithMarkdown(
+    `*⏪ Что делать, если вы забыли отметить цели вчера?*
 
 Не переживайте — бот позволяет откатиться на предыдущий день 👇
 
@@ -1437,7 +1349,7 @@ bot_.command('yesterday', async (ctx) => {
 Нажмите её — и бот создаст для вас подробный отчёт за прошлый день.
 
 💡 Используйте откат, чтобы сохранять честную статистику и не терять прогресс.`,
-      parse_mode: 'Markdown',
+    {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('❌ Закрыть', 'message_close')],
       ]).reply_markup
@@ -1448,11 +1360,8 @@ bot_.command('yesterday', async (ctx) => {
 
 
 bot_.command('report', async (ctx) => {
-  await ctx.replyWithVideo(
-    'https://files.catbox.moe/zre82m.mov',
-    {
-      caption:
-        `*📊 Откуда взять дневной/недельный/месяцный отчёт??*
+  await ctx.replyWithMarkdown(
+    `*📊 Откуда взять дневной/недельный/месяцный отчёт??*
 
 Бот автоматически помогает отслеживать ваши достижения на разных промежутках времени 👇
 
@@ -1463,14 +1372,14 @@ bot_.command('report', async (ctx) => {
 
 📅 *Недельный отчёт*  
 Недельный отчёт **приходит автоматически**.  
-Бот присылает его **каждое воскресенье в 10:00** ⏰  
+Бот присылает его **каждое воскресенье в 20:00** ⏰  
 В нём — ваш прогресс за всю неделю.
 
 🗓 *Месячный отчёт*  
 🚧 В разработке. Скоро станет доступен!
 
 💡 Отчёты помогают видеть реальный прогресс и сохранять мотивацию.`,
-      parse_mode: 'Markdown',
+    {
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('❌ Закрыть', 'message_close')],
       ]).reply_markup
@@ -1482,18 +1391,14 @@ bot_.command('report', async (ctx) => {
 
 bot_.command('achievements', async (ctx) => {
 
-  await ctx.replyWithVideo(
-    'https://files.catbox.moe/9smom0.mp4',
+  await ctx.replyWithMarkdown(
+    `*🎖 Как получить ачивку?*\n\n` +
+    `1. Выберите ачивку, которую хотите получить.\n` +
+    `2. Нажмите на неё — вы увидите её анимацию.\n` +
+    `3. Под анимацией будет написано, что нужно сделать, чтобы получить эту ачивку.\n\n` +
+    `*⚠ Важно!* Эпические ачивки доступны только в определённый период. После его окончания получить их будет невозможно!\n` +
+    `Чтобы не пропустить эпические ачивки, следите за нашими новостями в канале *@Motivation_bot_channel*`,
     {
-      caption:
-        `*🎖 Как получить ачивку?*\n\n` +
-        `1. Выберите ачивку, которую хотите получить.\n` +
-        `2. Нажмите на неё — вы увидите её анимацию.\n` +
-        `3. Под анимацией будет написано, что нужно сделать, чтобы получить эту ачивку.\n\n` +
-        `*⚠ Важно!* Эпические ачивки доступны только в определённый период. После его окончания получить их будет невозможно!\n` +
-        `Чтобы не пропустить эпические ачивки, следите за нашими новостями в канале *@Motivation_bot_channel*`
-      ,
-      parse_mode: 'Markdown',
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('❌ Закрыть', 'message_close')],
       ]).reply_markup
@@ -1505,17 +1410,13 @@ bot_.command('achievements', async (ctx) => {
 
 bot_.command('history', async (ctx) => {
 
-  await ctx.replyWithVideo(
-    'https://files.catbox.moe/m2hfd6.mp4',
+  await ctx.replyWithMarkdown(
+    `*🎖 Как поделиться ачивкой (историей)*\n\n` +
+    `1. Выберите ачивку, которую хотите опубликовать. Обратите внимание: делиться можно только ачивками, которые у вас уже есть.\n` +
+    `2. Нажмите на неё — вы увидите её анимацию.\n` +
+    `3. Под анимацией появится кнопка *Поделиться / История*. Дождитесь, пока ачивка загрузится, и затем сможете опубликовать её в истории.\n\n` +
+    `*⚠ Важно!* Делиться можно только теми ачивками, которые вы действительно имеете.`,
     {
-      caption:
-        `*🎖 Как поделиться ачивкой (историей)*\n\n` +
-        `1. Выберите ачивку, которую хотите опубликовать. Обратите внимание: делиться можно только ачивками, которые у вас уже есть.\n` +
-        `2. Нажмите на неё — вы увидите её анимацию.\n` +
-        `3. Под анимацией появится кнопка *Поделиться / История*. Дождитесь, пока ачивка загрузится, и затем сможете опубликовать её в истории.\n\n` +
-        `*⚠ Важно!* Делиться можно только теми ачивками, которые вы действительно имеете.`
-      ,
-      parse_mode: 'Markdown',
       reply_markup: Markup.inlineKeyboard([
         [Markup.button.callback('❌ Закрыть', 'message_close')],
       ]).reply_markup
