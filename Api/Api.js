@@ -233,8 +233,15 @@ export async function addCompletedDate(customUserId, date) {
   }
 }
 
-//генерация текста
-export const getGeneraleText = async (series, userTag, telegramId, goalsDone, goalsInProgress) => {
+// генерация текста
+export const getGeneraleText = async (
+  series,
+  userTag,
+  telegramId,
+  goalsDone,
+  goalsInProgress,
+  language = 'ru'
+) => {
   try {
     if (!telegramId) {
       console.error("❌ Нет telegramId для отчёта");
@@ -242,7 +249,9 @@ export const getGeneraleText = async (series, userTag, telegramId, goalsDone, go
     }
 
     const today = new Date();
-    const formattedDate = today.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    const normalized = language ? String(language).toLowerCase() : 'ru';
+    const locale = normalized === 'en' || normalized === 'ang' ? 'en-US' : 'ru-RU';
+    const formattedDate = today.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
 
     const response = await axios.post(`${BASE_URL}/generate-report/${telegramId}`, {
       goalsDone,
@@ -395,3 +404,45 @@ export async function getAllUserIds() {
     throw error;
   }
 }
+
+
+// Что "прокидывать" при вызове:
+// 1) `telegramId` (строка/число) - идентификатор пользователя в Telegram, по нему делаем update.
+// 2) `language` (строка) - одно из: `rus`/`ang` (значения БД) или `ru`/`en` (значения UI);
+//    функция сама замапит на `rus`/`ang`.
+export const updateUserLanguage = async (telegramId, language) => {
+  const baseTelegramId = telegramId != null ? String(telegramId) : null;
+  if (!baseTelegramId) throw new Error('telegramId is required');
+  if (!language) throw new Error('language is required');
+
+  const normalized = String(language).toLowerCase();
+  const dbLanguage =
+    normalized === 'ru' || normalized === 'rus' ? 'rus'
+      : normalized === 'en' || normalized === 'ang' ? 'ang'
+      : null;
+
+  if (!dbLanguage) throw new Error("language must be one of: 'rus'/'ang' or 'ru'/'en'");
+
+  const response = await axios.put(`${BASE_URL}/users`, {
+    telegramId: baseTelegramId,
+    language: dbLanguage,
+  });
+
+  return response.data;
+};
+
+
+// Что прокидывать:
+// 1) telegramId: string | number - Telegram ID пользователя.
+// Что вернет:
+// - 'rus' | 'ang'
+export const fetchUserLanguage = async (telegramId) => {
+  const baseTelegramId = telegramId != null ? String(telegramId) : null;
+  if (!baseTelegramId) throw new Error('telegramId is required');
+
+  const response = await axios.get(`${BASE_URL}/users/language`, {
+    params: { telegramId: baseTelegramId },
+  });
+
+  return response.data?.language;
+};
