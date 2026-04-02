@@ -260,7 +260,7 @@ bot.command('mini_aps', async (ctx) => {
   await ctx.replyWithMarkdown(
     m.commands.mini_aps.title,
     Markup.inlineKeyboard([
-      [Markup.button.webApp(m.common.openApp, `https://motivation-oz64-7lohqqx23-stepans-projects-e54d3120.vercel.app/`)],
+      [Markup.button.url(m.common.openApp, `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
       [Markup.button.callback(m.common.close, 'close_message')],
     ])
   );
