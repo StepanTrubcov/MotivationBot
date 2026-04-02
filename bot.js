@@ -67,6 +67,45 @@ const activeUsers = new Set();
 
 const bot = new Telegraf(BOT_TOKEN);
 
+// Если присылают кастомный эмодзи (Premium) или стикер — вернём его ID
+// bot.on('message', async (ctx, next) => {
+//   try {
+//     const msg = ctx.message;
+
+//     // 1) Custom Emoji в тексте/подписи (entities / caption_entities)
+//     const entities = [
+//       ...(msg?.entities || []),
+//       ...(msg?.caption_entities || []),
+//     ];
+//     const customEmojiIds = entities
+//       .filter((e) => e?.type === 'custom_emoji' && e?.custom_emoji_id)
+//       .map((e) => e.custom_emoji_id);
+
+//     if (customEmojiIds.length > 0) {
+//       const unique = [...new Set(customEmojiIds)];
+//       await ctx.reply(`custom_emoji_id:\n${unique.join('\n')}`);
+//       return;
+//     }
+
+//     // 2) Стикер (у обычных стикеров будет file_id; у кастом-эмодзи-стикеров может быть custom_emoji_id)
+//     const sticker = msg?.sticker;
+//     if (sticker) {
+//       const lines = [];
+//       if (sticker.custom_emoji_id) lines.push(`custom_emoji_id: ${sticker.custom_emoji_id}`);
+//       if (sticker.file_id) lines.push(`file_id: ${sticker.file_id}`);
+//       if (sticker.file_unique_id) lines.push(`file_unique_id: ${sticker.file_unique_id}`);
+//       if (lines.length > 0) {
+//         await ctx.reply(lines.join('\n'));
+//         return;
+//       }
+//     }
+//   } catch (e) {
+//     console.error('emoji id handler error:', e?.message || e);
+//   }
+
+//   return next?.();
+// });
+
 function dbToUiLanguage(dbLanguage) {
   const normalized = dbLanguage ? String(dbLanguage).toLowerCase() : null;
   return normalized === 'ang' ? 'en' : 'ru';
@@ -221,7 +260,7 @@ bot.command('mini_aps', async (ctx) => {
   await ctx.replyWithMarkdown(
     m.commands.mini_aps.title,
     Markup.inlineKeyboard([
-      [Markup.button.url(m.common.openApp, `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
+      [Markup.button.webApp(m.common.openApp, `https://motivation-oz64-7lohqqx23-stepans-projects-e54d3120.vercel.app/`)],
       [Markup.button.callback(m.common.close, 'close_message')],
     ])
   );
@@ -290,16 +329,16 @@ bot.command('generate', async (ctx) => {
       const isTodayCompleted = getIsTodayCompleted(timeGoalsSaving?.savingGoals);
 
       const levelsOfLights = [
-        { url: "5192859097178873603", daysMin: 2, daysMax: 4 },
-        { url: "5224536851808815753", daysMin: 5, daysMax: 8 },
-        { url: "5226521156764340272", daysMin: 9, daysMax: 12 },
-        { url: "5224528579701806800", daysMin: 13, daysMax: 16 },
-        { url: "5224530920458980477", daysMin: 17, daysMax: 22 },
-        { url: "5224196071923683270", daysMin: 23, daysMax: 30 },
-        { url: "5224673749596411018", daysMin: 31, daysMax: 45 },
-        { url: "5224203158619722114", daysMin: 46, daysMax: 60 },
-        { url: "5224343728604352036", daysMin: 61, daysMax: 89 },
-        { url: "5224479788873323449", daysMin: 90, daysMax: 120 },
+        { url: "5363843321485629976", daysMin: 2, daysMax: 9 },
+        { url: "5364350071791980859", daysMin: 10, daysMax: 19 },
+        { url: "5364279737407542873", daysMin: 20, daysMax: 35 },
+        { url: "5363901638551570334", daysMin: 36, daysMax: 50 },
+        { url: "5363967974321462175", daysMin: 51, daysMax: 65 },
+        { url: "5364003094269038792", daysMin: 66, daysMax: 80 },
+        { url: "5364130818006490766", daysMin: 81, daysMax: 95 },
+        { url: "5364125127174824316", daysMin: 96, daysMax: 110 },
+        { url: "5364242019004749954", daysMin: 111, daysMax: 140 },
+        { url: "5364093331531928721", daysMin: 141, daysMax: 190 },
       ];
       const grayLightUrl = '5224728012213228232';
 
@@ -676,16 +715,16 @@ bot.action('Done_goals', async (ctx) => {
     const timeGoalsSaving = await getUserSavingGoals(ctx.from.id)
 
     const levelsOfLights = [
-      { url: "5192859097178873603", daysMin: 2, daysMax: 4 },
-      { url: "5224536851808815753", daysMin: 5, daysMax: 8 },
-      { url: "5226521156764340272", daysMin: 9, daysMax: 12 },
-      { url: "5224528579701806800", daysMin: 13, daysMax: 16 },
-      { url: "5224530920458980477", daysMin: 17, daysMax: 22 },
-      { url: "5224196071923683270", daysMin: 23, daysMax: 30 },
-      { url: "5224673749596411018", daysMin: 31, daysMax: 45 },
-      { url: "5224203158619722114", daysMin: 46, daysMax: 60 },
-      { url: "5224343728604352036", daysMin: 61, daysMax: 89 },
-      { url: "5224479788873323449", daysMin: 90, daysMax: 120 },
+      { url: "5363843321485629976", daysMin: 2, daysMax: 9 },
+      { url: "5364350071791980859", daysMin: 10, daysMax: 19 },
+      { url: "5364279737407542873", daysMin: 20, daysMax: 35 },
+      { url: "5363901638551570334", daysMin: 36, daysMax: 50 },
+      { url: "5363967974321462175", daysMin: 51, daysMax: 65 },
+      { url: "5364003094269038792", daysMin: 66, daysMax: 80 },
+      { url: "5364130818006490766", daysMin: 81, daysMax: 95 },
+      { url: "5364125127174824316", daysMin: 96, daysMax: 110 },
+      { url: "5364242019004749954", daysMin: 111, daysMax: 140 },
+      { url: "5364093331531928721", daysMin: 141, daysMax: 190 },
     ];
 
     const grayLightUrl = '5224728012213228232'
@@ -1013,16 +1052,16 @@ async function sendDailyReminders(timeOfDay) {
     try {
 
       const levelsOfLights = [
-        { url: "5192859097178873603", daysMin: 2, daysMax: 4 },
-        { url: "5224536851808815753", daysMin: 5, daysMax: 8 },
-        { url: "5226521156764340272", daysMin: 9, daysMax: 12 },
-        { url: "5224528579701806800", daysMin: 13, daysMax: 16 },
-        { url: "5224530920458980477", daysMin: 17, daysMax: 22 },
-        { url: "5224196071923683270", daysMin: 23, daysMax: 30 },
-        { url: "5224673749596411018", daysMin: 31, daysMax: 45 },
-        { url: "5224203158619722114", daysMin: 46, daysMax: 60 },
-        { url: "5224343728604352036", daysMin: 61, daysMax: 89 },
-        { url: "5224479788873323449", daysMin: 90, daysMax: 120 },
+        { url: "5363843321485629976", daysMin: 2, daysMax: 9 },
+        { url: "5364350071791980859", daysMin: 10, daysMax: 19 },
+        { url: "5364279737407542873", daysMin: 20, daysMax: 35 },
+        { url: "5363901638551570334", daysMin: 36, daysMax: 50 },
+        { url: "5363967974321462175", daysMin: 51, daysMax: 65 },
+        { url: "5364003094269038792", daysMin: 66, daysMax: 80 },
+        { url: "5364130818006490766", daysMin: 81, daysMax: 95 },
+        { url: "5364125127174824316", daysMin: 96, daysMax: 110 },
+        { url: "5364242019004749954", daysMin: 111, daysMax: 140 },
+        { url: "5364093331531928721", daysMin: 141, daysMax: 190 },
       ];
 
       const grayLightUrl = '5224728012213228232'
