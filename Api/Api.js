@@ -446,3 +446,45 @@ export const fetchUserLanguage = async (telegramId) => {
 
   return response.data?.language;
 };
+
+
+/**
+ * POST /api/saving-goals?extend=true
+ * Тело: { userId } — telegramId.
+ * Дописывает 120 дней после последней даты; история сохраняется; на новые дни — те же цели, что на последнем заполненном дне.
+ */
+export async function appendSavingGoalsDays(userId) {
+  try {
+    const response = await axios.post(`${BASE_URL}/saving-goals?extend=true`, { userId });
+
+    const userData = response.data.user || {};
+    const savingGoals = userData.savingGoals || [];
+
+    return { success: true, data: { ...userData, savingGoals } };
+  } catch (error) {
+    console.error('Ошибка при дописывании дней в savingGoals:', error);
+    const errorMessage = error.response?.data?.error || error.message || 'Неизвестная ошибка';
+    return { success: false, error: errorMessage };
+  }
+}
+
+
+/**
+ * POST /api/saving-goals?resetStatuses=true
+ * Тело: { userId } — telegramId.
+ * Даты в массиве не меняются; у всех целей в goalData статус становится not_started.
+ */
+export async function resetSavingGoalsStatuses(userId) {
+  try {
+    const response = await axios.post(`${BASE_URL}/saving-goals?resetStatuses=true`, { userId });
+
+    const userData = response.data.user || {};
+    const savingGoals = userData.savingGoals || [];
+
+    return { success: true, data: { ...userData, savingGoals } };
+  } catch (error) {
+    console.error('Ошибка при сбросе статусов savingGoals:', error);
+    const errorMessage = error.response?.data?.error || error.message || 'Неизвестная ошибка';
+    return { success: false, error: errorMessage };
+  }
+}

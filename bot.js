@@ -1,6 +1,6 @@
 import { Telegraf, Markup } from 'telegraf';
 import dotenv from 'dotenv';
-import { getAllUserIds, getUserData, generateSavingGoalsReport, getAllGoals, getUserSavingGoals, clearAllSavingGoals, getUserSavingGoalsWithAutoPeriod, updateSavingGoalStatus, addProfile, initializeUserGoals, checkGoalCompletion, getAllStatus, addPoints, getGeneraleText, updateUserLanguage, fetchUserLanguage } from './Api/Api.js';
+import { getAllUserIds, getUserData, generateSavingGoalsReport, getAllGoals, getUserSavingGoals, clearAllSavingGoals, appendSavingGoalsDays, getUserSavingGoalsWithAutoPeriod, updateSavingGoalStatus, addProfile, initializeUserGoals, checkGoalCompletion, getAllStatus, addPoints, getGeneraleText, updateUserLanguage, fetchUserLanguage } from './Api/Api.js';
 import cron from 'node-cron';
 import sharp from 'sharp';
 import path from 'path';
@@ -260,11 +260,14 @@ bot.command('mini_aps', async (ctx) => {
   await ctx.replyWithMarkdown(
     m.commands.mini_aps.title,
     Markup.inlineKeyboard([
-      [Markup.button.url(m.common.openApp, `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
+      [Markup.button.webApp(m.common.openApp, `https://motivation-oz64-ojqfdt23k-stepans-projects-e54d3120.vercel.app`)],
       [Markup.button.callback(m.common.close, 'close_message')],
     ])
   );
 });
+
+//      [Markup.button.url(m.common.openApp, `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
+//      [Markup.button.webApp(m.common.openApp, `https://motivation-oz64.vercel.app/?startapp=story`)],
 
 bot.command('info', async (ctx) => {
   const profile = await addProfile(ctx);
@@ -791,6 +794,60 @@ bot.action('close_message', async (ctx) => {
   }
 });
 
+bot.action('expired_continue_habits', async (ctx) => {
+  const profile = await addProfile(ctx);
+  const lang = await resolveUserLang(profile?.telegramId);
+  const m = getMessages(lang);
+  const telegramId = profile?.telegramId;
+
+  try {
+    const result = telegramId ? await appendSavingGoalsDays(telegramId) : { success: false };
+    if (!result.success) {
+      return ctx.answerCbQuery(m.reminders.expiredGoalsError, { show_alert: true });
+    }
+
+    await ctx.answerCbQuery();
+    try {
+      await ctx.deleteMessage();
+    } catch (_) {}
+
+    await ctx.reply(m.reminders.continueHabitsSuccess, Markup.inlineKeyboard([
+      [Markup.button.url(m.reminders.uiButtons.openApp, `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
+      [Markup.button.callback(m.common.close, 'close_message')],
+    ]));
+  } catch (e) {
+    console.error('expired_continue_habits error:', e?.message || e);
+    await ctx.answerCbQuery(m.reminders.expiredGoalsError, { show_alert: true });
+  }
+});
+
+bot.action('expired_reset_goals', async (ctx) => {
+  const profile = await addProfile(ctx);
+  const lang = await resolveUserLang(profile?.telegramId);
+  const m = getMessages(lang);
+  const telegramId = profile?.telegramId;
+
+  try {
+    const result = telegramId ? await clearAllSavingGoals(telegramId) : { success: false };
+    if (!result.success) {
+      return ctx.answerCbQuery(m.reminders.expiredGoalsError, { show_alert: true });
+    }
+
+    await ctx.answerCbQuery();
+    try {
+      await ctx.deleteMessage();
+    } catch (_) {}
+
+    await ctx.reply(m.reminders.resetGoalsSuccess, Markup.inlineKeyboard([
+      [Markup.button.url(m.reminders.uiButtons.openApp, `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
+      [Markup.button.callback(m.common.close, 'close_message')],
+    ]));
+  } catch (e) {
+    console.error('expired_reset_goals error:', e?.message || e);
+    await ctx.answerCbQuery(m.reminders.expiredGoalsError, { show_alert: true });
+  }
+});
+
 bot.command('channel', async (ctx) => {
   const profile = await addProfile(ctx);
   const lang = await resolveUserLang(profile?.telegramId);
@@ -1119,7 +1176,8 @@ async function sendDailyReminders(timeOfDay) {
             await bot.telegram.sendMessage(userId.telegramId, m.reminders.noGoalsExpiredText, {
               reply_markup: {
                 inline_keyboard: [
-                  [Markup.button.url(m.reminders.uiButtons.openApp, `https://t.me/BotMotivation_TG_bot?startapp=fullscreen`)],
+                  [Markup.button.callback(m.reminders.uiButtons.continueHabits, 'expired_continue_habits')],
+                  [Markup.button.callback(m.reminders.uiButtons.resetGoals, 'expired_reset_goals')],
                 ]
               }
             });

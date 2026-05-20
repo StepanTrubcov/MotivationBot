@@ -166,7 +166,7 @@ export const MESSAGES = {
       noGoalsInMorningText:
         'У вас нет целей, возможно вы их не взяли или у них закончился срок выполнения❗️\nНужно зайти в приложение и снова взять себе цели',
       noGoalsExpiredText:
-        'У ваших целей истёк срок выполнения❗️\nНужно зайти в приложение и снова взять себе цель',
+        'У ваших целей истёк срок выполнения❗️\nВыберите действие: \nПродолжить выполнение этих целей \nСбросить все цели ',
 
       morningWithoutGoals: [
         '🌅 Доброе утро.\n\nСегодня можно выбрать цель и начать отслеживать прогресс.',
@@ -199,7 +199,13 @@ export const MESSAGES = {
         myGoals: '🎯 Мои цели',
         report: '📊 Получить отчёт',
         markGoals: '✅ Отметить цели',
+        continueHabits: 'Продолжить привычки',
+        resetGoals: 'Сбросить цели',
       },
+
+      continueHabitsSuccess: 'Привычки продлены на 120 дней. Можете продолжать отслеживать цели в приложении.',
+      resetGoalsSuccess: 'Все цели сброшены. Зайдите в приложение и выберите новые цели.',
+      expiredGoalsError: 'Не удалось выполнить действие. Попробуйте позже.',
 
       streakLabelPrefix: 'Серия',
       streakLastChanceText: 'У вас последний шанс сохранить серию!',
@@ -520,7 +526,7 @@ export const MESSAGES = {
       noGoalsInMorningText:
         "You have no goals — maybe you haven’t taken any yet or their execution period has ended ❗️\nOpen the app and take new goals again.",
       noGoalsExpiredText:
-        'Your goals execution period has ended ❗️\nOpen the app and take a new goal.',
+        'Your goals execution period has ended ❗️\nChoose an action:\nContinue these goals\nReset all goals',
 
       morningWithoutGoals: [
         '🌅 Good morning.\n\nToday you can choose a goal and start tracking your progress.',
@@ -553,7 +559,13 @@ export const MESSAGES = {
         myGoals: '🎯 My goals',
         report: '📊 Get the report',
         markGoals: '✅ Mark goals',
+        continueHabits: 'Continue habits',
+        resetGoals: 'Reset goals',
       },
+
+      continueHabitsSuccess: 'Habits extended for 120 days. You can keep tracking your goals in the app.',
+      resetGoalsSuccess: 'All goals have been reset. Open the app and choose new goals.',
+      expiredGoalsError: 'Could not complete the action. Please try again later.',
 
       streakLabelPrefix: 'Streak',
       streakLastChanceText: "This is your last chance to keep the streak!",
